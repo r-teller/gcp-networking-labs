@@ -1,0 +1,23 @@
+# Local staging directories
+**/.staging/
+**/.staging/*
+
+# .terraform directory
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+*.tfvars
+
+# terraform lock file
+*.terraform.lock.*
+
+# .temp directory
+**/.temp/*
+
+
+# outputs directory used to compare rules that are not managed by this terraform module
+**/outputs/*
+!**/outputs/.gitkeep
