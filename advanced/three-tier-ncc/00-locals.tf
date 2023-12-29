@@ -6,7 +6,7 @@ locals {
   _regions = {
     "us-east4" : module.utils.region_short_name_map["us-east4"]
     "us-west1" : module.utils.region_short_name_map["us-west1"]
-    "us-central1" : module.utils.region_short_name_map["europe-west3"]
+    "us-central1" : module.utils.region_short_name_map["us-central1"]
     "asia-southeast1" : module.utils.region_short_name_map["asia-southeast1"]
     "europe-west3" : module.utils.region_short_name_map["europe-west3"]
   }

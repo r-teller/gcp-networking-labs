@@ -1,13 +1,12 @@
-resource "random_integer" "shared_aa00_nonprod-to-access_trusted_aa00-seed" {
-  min = 0
-  max = 4095
+resource "random_id" "shared_aa00_nonprod-to-access_trusted_aa00-seed" {
+  byte_length = 2
 }
 
 resource "random_integer" "shared_aa00_nonprod-to-access_trusted_aa00" {
   for_each = { for k, v in merge(values(local.shared_aa00_nonprod-to-access_trusted_aa00-map).*.tunnels...) : k => {} if v.is_local }
   min      = 0
   max      = 4095
-  seed     = format("%d-%s", random_integer.shared_aa00_nonprod-to-access_trusted_aa00-seed.result, each.key)
+  seed     = format("%s-%s", random_id.shared_aa00_nonprod-to-access_trusted_aa00-seed.hex, each.key)
 }
 
 locals {
@@ -25,8 +24,8 @@ locals {
       asn      = local._networks[x[0]].asn
       key      = x[0]
       is_local = local.shared_aa00_nonprod-to-access_trusted_aa00.networks.local == x[0]
-      name = format("vpn-%04d-%s-%s-%s",
-        random_integer.shared_aa00_nonprod-to-access_trusted_aa00-seed.result,
+      name = format("vpn-%s-%s-%s-%s",
+        random_id.shared_aa00_nonprod-to-access_trusted_aa00-seed.hex,
         local._networks[x[0]].prefix,
         local._regions[x[1]],
         random_id.id.hex
@@ -41,8 +40,8 @@ locals {
   shared_aa00_nonprod-to-access_trusted_aa00-map = { for k, v in local._shared_aa00_nonprod-to-access_trusted_aa00-map : k => merge(v, {
     tunnels : { for idx in range(2) :
       format("%s-%02d", k, idx) => {
-        name = format("vpn-%04d-%s-%s-%02d-%s",
-          random_integer.shared_aa00_nonprod-to-access_trusted_aa00-seed.result,
+        name = format("vpn-%s-%s-%s-%02d-%s",
+          random_id.shared_aa00_nonprod-to-access_trusted_aa00-seed.hex,
           local._networks[v.key].prefix,
           local._regions[v.region],
           idx,
@@ -65,14 +64,14 @@ locals {
         self_name = v.name
         peer_name = (
           v.is_local
-          ? format("vpn-%04d-%s-%s-%s",
-            random_integer.shared_aa00_nonprod-to-access_trusted_aa00-seed.result,
+          ? format("vpn-%s-%s-%s-%s",
+            random_id.shared_aa00_nonprod-to-access_trusted_aa00-seed.hex,
             local._networks[local.shared_aa00_nonprod-to-access_trusted_aa00.networks.remote].prefix,
             local._regions[v.region],
             random_id.id.hex
           )
-          : format("vpn-%04d-%s-%s-%s",
-            random_integer.shared_aa00_nonprod-to-access_trusted_aa00-seed.result,
+          : format("vpn-%s-%s-%s-%s",
+            random_id.shared_aa00_nonprod-to-access_trusted_aa00-seed.hex,
             local._networks[local.shared_aa00_nonprod-to-access_trusted_aa00.networks.local].prefix,
             local._regions[v.region],
             random_id.id.hex
