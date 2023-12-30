@@ -10,6 +10,16 @@ locals {
     "asia-southeast1" : module.utils.region_short_name_map["asia-southeast1"]
     "europe-west3" : module.utils.region_short_name_map["europe-west3"]
   }
+
+  continent_short_name = {
+    asia         = "az"
+    australia    = "au"
+    europe       = "eu"
+    northamerica = "na"
+    southamerica = "sa"
+    us           = "us"
+    me           = "me"
+  }
   # aggregated_advertisements = {
   #   "us-east4" : [],
   #   "us-west1" : [],

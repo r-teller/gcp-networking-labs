@@ -1,86 +1,202 @@
-# resource "google_storage_bucket_object" "core_wan_to_distro_lan_vyos_usc1" {
-#   name    = "core_wan_to_distro_lan_vyos_usc1.conf"
-#   bucket  = google_storage_bucket.bucket.name
-#   content = "."
+locals {
+  core_wan-to-distro_lan-vyos = {
+    prefix       = "core-wan-to-distro-lan"
+    machine_type = "n2d-standard-2"
+    zones = {
+      "us-west1-a" = 1
+      "us-east4-a" = 1
+    }
+    service_account = google_service_account.vyos_compute_sa.email
+    interfaces = {
+      1 = {
+        network        = "distro_lan"
+        subnetwork_tag = "network_appliance"
+      }
+      0 = {
+        network        = "core_wan"
+        subnetwork_tag = "network_appliance"
+      }
+    }
+  }
 
-#   lifecycle {
-#     ignore_changes = [detect_md5hash]
-#   }
-# }
+  _core_wan-to-distro_lan-vyos-map = merge([
+    for k1, v1 in local.core_wan-to-distro_lan-vyos.zones : {
+      for idx in range(v1) :
+      format("%s-vyos-%s-%02d", local.core_wan-to-distro_lan-vyos.prefix, k1, idx) => {
+        name = format("%s-vyos-%s-%02d-%s",
+          local.core_wan-to-distro_lan-vyos.prefix,
+          join("", [
+            local.continent_short_name[split("-", k1)[0]],
+            replace(join("", slice(split("-", k1), 1, 3)), "/(n)orth|(s)outh|(e)ast|(w)est|(c)entral/", "$1$2$3$4$5")
+          ]),
+          idx,
+          random_id.id.hex
+        )
+        machine_type    = local.core_wan-to-distro_lan-vyos.machine_type
+        zone            = k1
+        region          = regex("^(.*)-.", k1)[0]
+        service_account = local.core_wan-to-distro_lan-vyos.service_account
+      }
+    }
+  ]...)
 
-# resource "google_storage_bucket_object" "distro_lan_to_access_truested_vyos_usc1" {
-#   name    = "distro_lan_to_access_truested_vyos_usc1.conf"
-#   bucket  = google_storage_bucket.bucket.name
-#   content = "."
+  core_wan-to-distro_lan-vyos-map = {
+    for k1, v1 in local._core_wan-to-distro_lan-vyos-map : k1 => merge(v1, {
+      #   bucket = "core_wan_to_distro_lan_vyos_usc1.conf"
+      bucket_object = format("core_wan-to-distro_lan-vyos-%s.conf", local._regions[v1.region])
+      #   pubsub_subscription = format("core-wan-to-distro-lan-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
+      subnetworks = { for k2, v2 in local.core_wan-to-distro_lan-vyos.interfaces : format("%s-%s", k1, k2) => {
+        region = v1.region
+        subnetwork = format(
+          "%s-%s-%s", local._networks[v2.network].prefix,
+          replace(
+            [
+              for subnetwork in local._networks[v2.network].subnetworks :
+              subnetwork.ip_cidr_range if(
+                subnetwork.region == v1.region &&
+                contains(subnetwork.tags, v2.subnetwork_tag)
+              )
+            ][0],
+            "//|\\./", "-"
+          ),
+          random_id.id.hex
+        )
+        }
+      }
+    })
+  }
+}
 
-#   lifecycle {
-#     ignore_changes = [detect_md5hash]
-#   }
-# }
+resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
+  for_each     = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
+  name         = each.key
+  project      = var.project_id
+  region       = each.value.region
+  address_type = "INTERNAL"
+  purpose      = "GCE_ENDPOINT"
+  subnetwork   = each.value.subnetwork
 
-# resource "google_compute_instance" "core_wan_to_distro_lan_vyos_usc1" {
-#   count   = 2
-#   project = var.project_id
+  depends_on = [
+    google_compute_subnetwork.core_wan,
+    google_compute_subnetwork.distro_lan,
 
-#   name = format("core-wan-to-distro-lan-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
+  ]
+}
 
-#   zone = "us-central1-b"
+resource "google_storage_bucket_object" "core_wan-to-distro_lan-vyos" {
+  for_each = toset(distinct(values(local.core_wan-to-distro_lan-vyos-map).*.bucket_object))
+  name     = each.key
+  bucket   = google_storage_bucket.bucket.name
+  content  = "."
 
-#   boot_disk {
-#     auto_delete = true
-#     device_name = "instance-1"
+  lifecycle {
+    ignore_changes = [detect_md5hash]
+  }
+}
 
-#     initialize_params {
-#       image = "projects/rteller-demo-host-aaaa/global/images/vyos-advanced-v1-3-5"
-#       size  = 10
-#       type  = "pd-standard"
-#     }
+resource "google_pubsub_subscription" "core_wan-to-distro_lan-vyos" {
+  for_each = local.core_wan-to-distro_lan-vyos-map
 
-#     mode = "READ_WRITE"
-#   }
+  project = var.project_id
+  name    = each.value.name
+  topic   = google_pubsub_topic.configuration_update_topic.name
 
-#   can_ip_forward      = true
-#   deletion_protection = false
-#   enable_display      = false
+  filter = "attributes.objectId = \"${each.value.bucket_object}\""
 
-#   machine_type = "n2d-standard-2"
+  ack_deadline_seconds = 30
+}
 
-#   metadata = {
-#     serial-port-enable      = "TRUE"
-#     pubsub-subscription     = format("core-wan-to-distro-lan-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
-#     configuration_bucket_id = google_storage_bucket_object.core_wan_to_distro_lan_vyos_usc1.bucket
-#     configuration_object_id = google_storage_bucket_object.core_wan_to_distro_lan_vyos_usc1.name
-#   }
+resource "google_compute_instance" "core_wan-to-distro_lan-vyos" {
+  for_each = local.core_wan-to-distro_lan-vyos-map
 
+  depends_on = [
+    google_storage_bucket_object.core_wan-to-distro_lan-vyos,
+    google_pubsub_subscription.core_wan-to-distro_lan-vyos,
+  ]
 
-#   network_interface {
-#     subnetwork = google_compute_subnetwork.core_wan[
-#       [for x in local._networks.core_wan.subnetworks : x.ip_cidr_range if contains(try(x.tags, []), "network_appliance") && x.region == "us-central1"][0]
-#     ].self_link
-#   }
+  project = var.project_id
 
-#   network_interface {
-#     subnetwork = google_compute_subnetwork.distro_lan[
-#       [for x in local._networks.distro_lan.subnetworks : x.ip_cidr_range if contains(try(x.tags, []), "network_appliance") && x.region == "us-central1"][0]
-#     ].self_link
-#   }
+  name = each.value.name
 
-#   scheduling {
-#     automatic_restart   = true
-#     on_host_maintenance = "MIGRATE"
-#     preemptible         = false
-#     provisioning_model  = "STANDARD"
-#   }
+  zone = each.value.zone
 
-#   service_account {
-#     email  = google_service_account.vyos_compute_sa.email
-#     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-#   }
+  boot_disk {
+    auto_delete = true
+    device_name = each.value.name
 
-#   lifecycle {
-#     ignore_changes = [metadata["ssh-keys"]]
-#   }
-# }
+    initialize_params {
+      image = "projects/rteller-demo-host-aaaa/global/images/vyos-advanced-v1-3-5"
+      size  = 10
+      type  = "pd-standard"
+    }
+
+    mode = "READ_WRITE"
+  }
+
+  can_ip_forward      = true
+  deletion_protection = false
+  enable_display      = false
+
+  machine_type = each.value.machine_type
+
+  metadata = {
+    serial-port-enable      = "TRUE"
+    pubsub-subscription     = each.value.name
+    configuration_bucket_id = google_storage_bucket.bucket.name
+    configuration_object_id = each.value.bucket_object
+  }
+
+  dynamic "network_interface" {
+    for_each = each.value.subnetworks
+    content {
+      network_ip         = google_compute_address.core_wan-to-distro_lan-vyos[network_interface.key].address
+      subnetwork         = network_interface.value.subnetwork
+      subnetwork_project = var.project_id
+    }
+  }
+
+  scheduling {
+    automatic_restart   = true
+    on_host_maintenance = "MIGRATE"
+    preemptible         = false
+    provisioning_model  = "STANDARD"
+  }
+
+  service_account {
+    email  = each.value.service_account
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
+
+  lifecycle {
+    ignore_changes = [metadata["ssh-keys"]]
+  }
+}
+
+resource "google_network_connectivity_spoke" "core_wan-to-distro_lan" {
+  for_each = toset(distinct([for instance in google_compute_instance.core_wan-to-distro_lan-vyos : regex("^(.*)-.", instance.zone)[0]]))
+  project  = var.project_id
+
+  name = format("%s-%s-%s-%s",
+    local._network_distro_lan.prefix,
+    "appliance-northbound",
+    local._regions["us-central1"],
+  random_id.id.hex, )
+
+  location = "us-central1"
+
+  hub = google_network_connectivity_hub.distro_lan.id
+
+  linked_router_appliance_instances {
+    site_to_site_data_transfer = true
+    dynamic "instances" {
+      for_each = { for k, v in google_compute_instance.core_wan-to-distro_lan-vyos : k => v if startswith(v.zone, each.key) }
+      content {
+        virtual_machine = instances.value.self_link
+        ip_address      = instances.value.network_interface[1].network_ip
+      }
+    }
+  }
+}
 
 # resource "google_compute_instance" "distro_lan_to_access_truested_vyos_usc1" {
 #   count   = 2
