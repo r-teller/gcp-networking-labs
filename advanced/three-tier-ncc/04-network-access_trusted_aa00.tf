@@ -7,6 +7,13 @@ resource "google_compute_network" "access_trusted_aa00" {
   routing_mode = "REGIONAL"
 }
 
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_hub
+resource "google_network_connectivity_hub" "access_trusted_aa00" {
+  project = var.project_id
+
+  name = format("%s-%s", local._networks.access_trusted_aa00.prefix, random_id.id.hex)
+}
+
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy
 resource "google_dns_response_policy" "access_trusted_aa00" {
   project = var.project_id

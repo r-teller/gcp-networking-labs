@@ -53,24 +53,9 @@ data "google_iam_policy" "subscription_subscriber" {
 # NCC HUB CONFIGURATION          #
 ##################################
 
-# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_hub
-resource "google_network_connectivity_hub" "core_wan" {
-  project = var.project_id
 
-  name = format("%s-%s", local._networks.core_wan.prefix, random_id.id.hex)
-}
 
-resource "google_network_connectivity_hub" "distro_lan" {
-  project = var.project_id
 
-  name = format("%s-%s", local._networks.distro_lan.prefix, random_id.id.hex)
-}
-
-resource "google_network_connectivity_hub" "access_trusted_aa00" {
-  project = var.project_id
-
-  name = format("%s-%s", local._networks.access_trusted_aa00.prefix, random_id.id.hex)
-}
 
 # resource "google_network_connectivity_hub" "access_trusted_0001" {
 #   project = var.project_id

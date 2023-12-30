@@ -7,6 +7,13 @@ resource "google_compute_network" "core_wan" {
   routing_mode = "GLOBAL"
 }
 
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_hub
+resource "google_network_connectivity_hub" "core_wan" {
+  project = var.project_id
+
+  name = format("%s-%s", local._networks.core_wan.prefix, random_id.id.hex)
+}
+
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy
 resource "google_dns_response_policy" "core_wan" {
   project = var.project_id

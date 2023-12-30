@@ -7,6 +7,13 @@ resource "google_compute_network" "distro_lan" {
   routing_mode = "REGIONAL"
 }
 
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_hub
+resource "google_network_connectivity_hub" "distro_lan" {
+  project = var.project_id
+
+  name = format("%s-%s", local._networks.distro_lan.prefix, random_id.id.hex)
+}
+
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy
 resource "google_dns_response_policy" "distro_lan" {
   project = var.project_id
