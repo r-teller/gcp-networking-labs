@@ -9,8 +9,8 @@ locals {
     prefix       = "core-wan-to-distro-lan"
     machine_type = "n2d-standard-2"
     zones = {
-      "us-west1-a" = 2
-      "us-east4-a" = 1
+      "us-west1-a" = 1
+      # "us-east4-a" = 1
     }
     service_account = google_service_account.vyos_compute_sa.email
     interfaces = {
@@ -48,9 +48,9 @@ locals {
 
   core_wan-to-distro_lan-vyos-map = {
     for k1, v1 in local._core_wan-to-distro_lan-vyos-map : k1 => merge(v1, {
-      #   bucket = "core_wan_to_distro_lan_vyos_usc1.conf"
+
       bucket_object = format("core_wan-to-distro_lan-vyos-%s.conf", local._regions[v1.region])
-      #   pubsub_subscription = format("core-wan-to-distro-lan-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
+
       subnetworks = { for k2, v2 in local.core_wan-to-distro_lan-vyos.interfaces : format("%s-%s", k1, k2) => {
         # instance = v1.name
         cidr_range = [
@@ -60,17 +60,17 @@ locals {
             contains(subnetwork.tags, v2.subnetwork_tag)
           )
         ][0]
-
-        region  = v1.region
-        router  = format("%s-%s", local._networks[v2.network].prefix, random_id.id.hex)
-        ncc_hub = format("%s-%s", local._networks[v2.network].prefix, random_id.id.hex)
+        network_prefix = local._networks[v2.network].prefix
+        region         = v1.region
+        # router         = local._networks[v2.network].prefix
+        # ncc_hub        = local._networks[v2.network].prefix
         ncc_spoke = format("%s-vyos-%s",
           local._networks[v2.network].prefix,
           local._regions[v1.region]
         )
         network = v2.network
         subnetwork = format(
-          "%s-%s-%s", local._networks[v2.network].prefix,
+          "%s-%s", local._networks[v2.network].prefix,
           replace(
             [
               for subnetwork in local._networks[v2.network].subnetworks :
@@ -80,8 +80,7 @@ locals {
               )
             ][0],
             "//|\\./", "-"
-          ),
-          random_id.id.hex
+          )
         )
         }
       }
@@ -89,6 +88,20 @@ locals {
   }
 }
 
+resource "null_resource" "core_wan-to-distro_lan-vyos" {
+  depends_on = [
+    google_network_connectivity_hub.core_wan,
+    google_network_connectivity_hub.distro_lan,
+    google_compute_router.core_wan,
+    google_compute_router.distro_lan,
+    google_compute_subnetwork.core_wan,
+    google_compute_subnetwork.distro_lan,
+    google_compute_router_interface.core_wan-appliance-nic0,
+    google_compute_router_interface.core_wan-appliance-nic1,
+    google_compute_router_interface.distro_lan-appliance-nic0,
+    google_compute_router_interface.distro_lan-appliance-nic1,
+  ]
+}
 resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
   for_each     = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
   name         = each.key
@@ -96,12 +109,10 @@ resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
   region       = each.value.region
   address_type = "INTERNAL"
   purpose      = "GCE_ENDPOINT"
-  subnetwork   = each.value.subnetwork
+  subnetwork   = format("%s-%s", each.value.subnetwork, random_id.id.hex)
 
   depends_on = [
-    google_compute_subnetwork.core_wan,
-    google_compute_subnetwork.distro_lan,
-
+    null_resource.core_wan-to-distro_lan-vyos,
   ]
 }
 
@@ -129,6 +140,7 @@ resource "google_pubsub_subscription" "core_wan-to-distro_lan-vyos" {
 }
 
 
+
 # resource "google_pubsub_subscription_iam_policy" "distro_lan_to_access_truested_vyos_usc1" {
 #   count = length(google_pubsub_subscription.distro_lan_to_access_truested_vyos_usc1)
 
@@ -151,8 +163,10 @@ resource "google_compute_instance" "core_wan-to-distro_lan-vyos" {
   for_each = local.core_wan-to-distro_lan-vyos-map
 
   depends_on = [
+    null_resource.core_wan-to-distro_lan-vyos,
     google_storage_bucket_object.core_wan-to-distro_lan-vyos,
     google_pubsub_subscription.core_wan-to-distro_lan-vyos,
+    google_compute_address.core_wan-to-distro_lan-vyos,
   ]
 
   project = var.project_id
@@ -191,7 +205,7 @@ resource "google_compute_instance" "core_wan-to-distro_lan-vyos" {
     for_each = each.value.subnetworks
     content {
       network_ip         = google_compute_address.core_wan-to-distro_lan-vyos[network_interface.key].address
-      subnetwork         = network_interface.value.subnetwork
+      subnetwork         = format("%s-%s", network_interface.value.subnetwork, random_id.id.hex)
       subnetwork_project = var.project_id
     }
   }
@@ -218,11 +232,9 @@ resource "google_network_connectivity_spoke" "core_wan-to-distro_lan-vyos" {
 
   project = var.project_id
 
-  name = format("appliance-%s-%s-%s", random_id.core_wan-to-distro_lan-seed.hex, each.key, random_id.id.hex)
-
+  name     = format("appliance-%s-%s-%s", random_id.core_wan-to-distro_lan-seed.hex, each.key, random_id.id.hex)
+  hub      = format("%s-%s", each.value.network_prefix, random_id.id.hex)
   location = each.value.region
-
-  hub = each.value.ncc_hub
 
   linked_router_appliance_instances {
     site_to_site_data_transfer = true
@@ -231,42 +243,28 @@ resource "google_network_connectivity_spoke" "core_wan-to-distro_lan-vyos" {
       content {
         virtual_machine = instances.value.self_link
         ip_address = [
-          for k2, v2 in instances.value.network_interface : v2.network_ip if endswith(v2.subnetwork, each.value.subnetwork)
+          for k2, v2 in instances.value.network_interface : v2.network_ip if endswith(v2.subnetwork, format("%s-%s", each.value.subnetwork, random_id.id.hex))
         ][0]
       }
     }
   }
 
   depends_on = [
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_compute_address.core_wan-to-distro_lan-vyos,
     google_compute_instance.core_wan-to-distro_lan-vyos,
   ]
 }
 
-# output "foobar" {
-#   value = [
-#     for k, v in google_compute_instance.core_wan-to-distro_lan-vyos : {
-#       for interface in v.network_interface
-#       : format("%s-%s", k, interface.network_ip) => {
-#         name       = v.name
-#         region     = regex("^(.*)-.", v.zone)[0]
-#         self_link  = v.self_link
-#         network_ip = interface.network_ip
-#       }
-#     }
-#   ]
-# }
-
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
-resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic0" {
+resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer0" {
   for_each = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
 
   project = var.project_id
 
-  name   = each.key
-  router = each.value.router
-  region = each.value.region
-  # router    = google_compute_router.core_wan[each.value.region].name
-  # interface = google_compute_router_interface.core_wan_appliance_nic0[each.value.region].name
+  name      = format("%s-peer0", each.key)
+  router    = format("%s-%s", each.value.network_prefix, random_id.id.hex)
+  region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 0), random_id.id.hex)
 
   peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
@@ -275,20 +273,20 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic0" {
   advertised_route_priority = 100
 
   depends_on = [
+    null_resource.core_wan-to-distro_lan-vyos,
     google_compute_instance.core_wan-to-distro_lan-vyos,
     google_network_connectivity_spoke.core_wan-to-distro_lan-vyos,
   ]
 }
 
-resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
+resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer1" {
   for_each = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
 
   project = var.project_id
 
-  name   = each.key
-  router = each.value.router
-  region = each.value.region
-
+  name      = format("%s-peer1", each.key)
+  router    = format("%s-%s", each.value.network_prefix, random_id.id.hex)
+  region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 1), random_id.id.hex)
 
   peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
@@ -297,6 +295,8 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
   advertised_route_priority = 100
 
   depends_on = [
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_compute_router_peer.core_wan-to-distro_lan-vyos-peer0,
     google_compute_instance.core_wan-to-distro_lan-vyos,
     google_network_connectivity_spoke.core_wan-to-distro_lan-vyos,
   ]
@@ -525,7 +525,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic0")
 #   router    = google_compute_router.core_wan["us-central1"].name
 #   region    = google_compute_router.core_wan["us-central1"].region
-#   interface = google_compute_router_interface.core_wan_appliance_nic0["us-central1"].name
+#   interface = google_compute_router_interface.core_wan-appliance-nic0["us-central1"].name
 
 #   peer_asn                  = 65534
 #   router_appliance_instance = each.value.self_link
@@ -545,7 +545,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic1")
 #   router    = google_compute_router.core_wan["us-central1"].name
 #   region    = google_compute_router.core_wan["us-central1"].region
-#   interface = google_compute_router_interface.core_wan_appliance_nic1["us-central1"].name
+#   interface = google_compute_router_interface.core_wan-appliance-nic1["us-central1"].name
 
 
 
@@ -567,7 +567,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic0")
 #   router    = google_compute_router.distro_lan["us-central1"].name
 #   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan_appliance_nic0["us-central1"].name
+#   interface = google_compute_router_interface.distro_lan-appliance-nic0["us-central1"].name
 
 #   peer_asn                  = 65534
 #   router_appliance_instance = each.value.self_link
@@ -587,7 +587,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic1")
 #   router    = google_compute_router.distro_lan["us-central1"].name
 #   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan_appliance_nic1["us-central1"].name
+#   interface = google_compute_router_interface.distro_lan-appliance-nic1["us-central1"].name
 
 #   peer_asn                  = 65534
 #   router_appliance_instance = each.value.self_link
@@ -607,7 +607,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic0")
 #   router    = google_compute_router.distro_lan["us-central1"].name
 #   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan_appliance_nic0["us-central1"].name
+#   interface = google_compute_router_interface.distro_lan-appliance-nic0["us-central1"].name
 
 #   peer_asn                  = 65533
 #   router_appliance_instance = each.value.self_link
@@ -627,7 +627,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic1")
 #   router    = google_compute_router.distro_lan["us-central1"].name
 #   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan_appliance_nic1["us-central1"].name
+#   interface = google_compute_router_interface.distro_lan-appliance-nic1["us-central1"].name
 
 #   peer_asn                  = 65533
 #   router_appliance_instance = each.value.self_link
@@ -648,7 +648,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic0")
 #   router    = google_compute_router.access_trusted_aa00["us-central1"].name
 #   region    = google_compute_router.access_trusted_aa00["us-central1"].region
-#   interface = google_compute_router_interface.access_trusted_aa00_appliance_nic0["us-central1"].name
+#   interface = google_compute_router_interface.access_trusted_aa00-appliance-nic0["us-central1"].name
 
 #   peer_asn                  = 65533
 #   router_appliance_instance = each.value.self_link
@@ -668,7 +668,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 #   name      = format("%s-%s", each.value.name, "nic1")
 #   router    = google_compute_router.access_trusted_aa00["us-central1"].name
 #   region    = google_compute_router.access_trusted_aa00["us-central1"].region
-#   interface = google_compute_router_interface.access_trusted_aa00_appliance_nic1["us-central1"].name
+#   interface = google_compute_router_interface.access_trusted_aa00-appliance-nic1["us-central1"].name
 
 #   peer_asn                  = 65533
 #   router_appliance_instance = each.value.self_link
@@ -689,7 +689,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 # #   name      = format("%s-%s", each.value.name, "nic0")
 # #   router    = google_compute_router.access_trusted_0001["us-central1"].name
 # #   region    = google_compute_router.access_trusted_0001["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0001_appliance_nic0["us-central1"].name
+# #   interface = google_compute_router_interface.access_trusted_0001-appliance-nic0["us-central1"].name
 
 # #   peer_asn                  = 65533
 # #   router_appliance_instance = each.value.self_link
@@ -709,7 +709,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 # #   name      = format("%s-%s", each.value.name, "nic1")
 # #   router    = google_compute_router.access_trusted_0001["us-central1"].name
 # #   region    = google_compute_router.access_trusted_0001["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0001_appliance_nic1["us-central1"].name
+# #   interface = google_compute_router_interface.access_trusted_0001-appliance-nic1["us-central1"].name
 
 # #   peer_asn                  = 65533
 # #   router_appliance_instance = each.value.self_link
@@ -730,7 +730,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 # #   name      = format("%s-%s", each.value.name, "nic0")
 # #   router    = google_compute_router.access_trusted_0002["us-central1"].name
 # #   region    = google_compute_router.access_trusted_0002["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0002_appliance_nic0["us-central1"].name
+# #   interface = google_compute_router_interface.access_trusted_0002-appliance-nic0["us-central1"].name
 
 # #   peer_asn                  = 65533
 # #   router_appliance_instance = each.value.self_link
@@ -750,7 +750,7 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-nic1" {
 # #   name      = format("%s-%s", each.value.name, "nic1")
 # #   router    = google_compute_router.access_trusted_0002["us-central1"].name
 # #   region    = google_compute_router.access_trusted_0002["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0002_appliance_nic1["us-central1"].name
+# #   interface = google_compute_router_interface.access_trusted_0002-appliance-nic1["us-central1"].name
 
 # #   peer_asn                  = 65533
 # #   router_appliance_instance = each.value.self_link

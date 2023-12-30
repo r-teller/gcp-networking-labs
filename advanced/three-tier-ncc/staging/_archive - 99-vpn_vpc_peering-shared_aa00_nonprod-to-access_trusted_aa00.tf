@@ -10,13 +10,20 @@ resource "random_integer" "shared_aa00_nonprod-to-access_trusted_aa00" {
 }
 
 locals {
-  shared_aa00_nonprod-to-access_trusted_aa00 = {
+  access_trusted_aa00-to-shared_aa00_nonprod = {
     regions = ["us-central1"]
     networks = {
       local  = "shared_aa00_nonprod",
       remote = "access_trusted_aa00",
     }
-  }
+  }  
+  # shared_aa00_nonprod-to-access_trusted_aa00 = {
+  #   regions = ["us-central1"]
+  #   networks = {
+  #     local  = "shared_aa00_nonprod",
+  #     remote = "access_trusted_aa00",
+  #   }
+  # }
 
   _shared_aa00_nonprod-to-access_trusted_aa00-map = {
     for x in setproduct(values(local.shared_aa00_nonprod-to-access_trusted_aa00.networks), local.shared_aa00_nonprod-to-access_trusted_aa00.regions) :

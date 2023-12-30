@@ -15,6 +15,15 @@ resource "google_storage_bucket" "bucket" {
   force_destroy = true
 }
 
+resource "google_storage_notification" "core_wan_to_distro_lan_vyos_usc1" {
+  bucket         = google_storage_bucket.bucket.name
+  payload_format = "JSON_API_V1"
+  topic          = google_pubsub_topic.configuration_update_topic.id
+  event_types    = ["OBJECT_FINALIZE", "OBJECT_METADATA_UPDATE"]
+  depends_on     = [google_pubsub_topic_iam_member.pubsub_notification_event]
+}
+
+
 ##################################
 # TOPIC CONFIGURATION            #
 ##################################

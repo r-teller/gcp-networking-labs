@@ -165,7 +165,7 @@ resource "google_compute_router_nat" "distro_lan" {
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
-resource "google_compute_router_interface" "distro_lan_appliance_nic0" {
+resource "google_compute_router_interface" "distro_lan-appliance-nic0" {
   for_each = { for x in local._networks.distro_lan.subnetworks : x.ip_cidr_range => x if contains(try(x.tags, []), "network_appliance") }
 
   project = var.project_id
@@ -177,7 +177,7 @@ resource "google_compute_router_interface" "distro_lan_appliance_nic0" {
   subnetwork         = google_compute_subnetwork.distro_lan[each.key].self_link
 }
 
-resource "google_compute_router_interface" "distro_lan_appliance_nic1" {
+resource "google_compute_router_interface" "distro_lan-appliance-nic1" {
   for_each = { for x in local._networks.distro_lan.subnetworks : x.ip_cidr_range => x if contains(try(x.tags, []), "network_appliance") }
 
   project = var.project_id
@@ -185,7 +185,7 @@ resource "google_compute_router_interface" "distro_lan_appliance_nic1" {
   name                = format("%s-%s-%s", local._networks.distro_lan.prefix, format("nic%02d", 1), random_id.id.hex)
   router              = google_compute_router.distro_lan[each.value.region].name
   region              = each.value.region
-  redundant_interface = google_compute_router_interface.distro_lan_appliance_nic0[each.key].name
+  redundant_interface = google_compute_router_interface.distro_lan-appliance-nic0[each.key].name
   private_ip_address  = cidrhost(google_compute_subnetwork.distro_lan[each.key].ip_cidr_range, -4)
   subnetwork          = google_compute_subnetwork.distro_lan[each.key].self_link
 }
