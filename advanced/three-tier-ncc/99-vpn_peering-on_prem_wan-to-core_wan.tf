@@ -11,7 +11,7 @@ resource "random_integer" "on_prem_wan-to-core_wan" {
 
 locals {
   on_prem_wan-to-core_wan = {
-    regions = ["us-central1"]
+    regions = ["us-east4"]
     networks = {
       local  = "on_prem_wan",
       remote = "core_wan",

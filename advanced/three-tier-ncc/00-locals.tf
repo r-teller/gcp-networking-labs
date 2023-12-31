@@ -123,6 +123,33 @@ locals {
       ]
     }
 
+    access_trusted_transit = {
+      prefix = "access-trusted-transit"
+      asn    = 64514
+      subnetworks = [
+        {
+
+          region = "us-east4",
+          ip_cidr_range : "172.24.64.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "us-west1",
+          ip_cidr_range : "172.24.65.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "asia-southeast1",
+          ip_cidr_range : "172.24.66.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "europe-west3",
+          ip_cidr_range : "172.24.67.0/24",
+          tags = ["network_appliance"],
+        },
+      ]
+    }
 
     access_trusted_aa00 = {
       prefix = "access-trusted-aa00"
@@ -166,6 +193,34 @@ locals {
       ]
     }
 
+    access_trusted_ab00 = {
+      prefix = "access-trusted-ab00"
+      asn    = 64516
+      subnetworks = [
+        {
+
+          region = "us-east4",
+          ip_cidr_range : "172.24.32.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "us-west1",
+          ip_cidr_range : "172.24.33.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "asia-southeast1",
+          ip_cidr_range : "172.24.34.0/24",
+          tags = ["network_appliance"],
+        },
+        {
+          region = "europe-west3",
+          ip_cidr_range : "172.24.35.0/24",
+          tags = ["network_appliance"],
+        },
+      ]
+    }
+
     shared_aa00_prod = {
       prefix = "shared-aa00-prod"
       asn    = 4200000000
@@ -188,7 +243,7 @@ locals {
       subnetworks = [
         {
           region = "us-east4",
-          ip_cidr_range : "10.0.0.0/24",
+          ip_cidr_range : "10.0.0.0/27",
         }
       ]
     }
