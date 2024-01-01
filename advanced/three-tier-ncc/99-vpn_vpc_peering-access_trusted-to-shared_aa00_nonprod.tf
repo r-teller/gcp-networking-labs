@@ -22,7 +22,7 @@ locals {
   access_trusted-to-shared_aa00_nonprod = {
     regions = ["us-east4"]
     networks = {
-      local  = "access_trusted_aa00",
+      local  = "access_trusted_transit",
       remote = "shared_aa00_nonprod",
     }
     tunnel_count = 1
@@ -45,7 +45,7 @@ locals {
     peerings = [
       {
         ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
-        local                = "access_trusted_transit",
+        local                = "access_trusted_aa00",
         remote               = "shared_aa00_nonprod",
         export_custom_routes = true,
         import_custom_routes = false,
@@ -53,7 +53,7 @@ locals {
       {
         ## VPC Peering from shared-vpc-nonprod to access-trusted-transit
         local                = "shared_aa00_nonprod",
-        remote               = "access_trusted_transit",
+        remote               = "access_trusted_aa00",
         export_custom_routes = false,
         import_custom_routes = true,
       },
@@ -80,7 +80,7 @@ locals {
   }
 
   access_trusted-to-shared_aa00_nonprod-map = { for k, v in local._access_trusted-to-shared_aa00_nonprod-map : k => merge(v, {
-    tunnels : { for idx in range(2) :
+    tunnels : { for idx in range(local.access_trusted-to-shared_aa00_nonprod.tunnel_count) :
       format("%s-%02d", k, idx) => {
         name = format("vpn-%s-%s-%s-%02d-%s",
           random_id.access_trusted-to-shared_aa00_nonprod-seed.hex,
@@ -297,7 +297,7 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_nonprod" {
 }
 
 resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_nonprod" {
-  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod : k => v if startswith(k, "access_trusted_aa00") }
+  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod : k => v if startswith(k, "access_trusted_transit") }
 
   project = var.project_id
 
@@ -305,11 +305,17 @@ resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_nonp
 
   location = each.value.region
 
-  hub = google_network_connectivity_hub.access_trusted_aa00.id
+  hub = google_network_connectivity_hub.access_trusted_transit.id
 
   linked_vpn_tunnels {
     site_to_site_data_transfer = true
-    uris                       = [for k, v in google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.value.name)]
+    uris = [
+      for k, v in google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod : v.self_link
+      if(
+        v.region == each.value.region &&
+        endswith(v.vpn_gateway, each.value.name)
+      )
+    ]
   }
 
   depends_on = [

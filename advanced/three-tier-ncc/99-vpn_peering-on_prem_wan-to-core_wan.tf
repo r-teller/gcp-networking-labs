@@ -16,6 +16,7 @@ locals {
       local  = "on_prem_wan",
       remote = "core_wan",
     }
+    tunnel_count = 1
   }
 
   _on_prem_wan-to-core_wan-map = {
@@ -38,7 +39,7 @@ locals {
   }
 
   on_prem_wan-to-core_wan-map = { for k, v in local._on_prem_wan-to-core_wan-map : k => merge(v, {
-    tunnels : { for idx in range(2) :
+    tunnels : { for idx in range(local.on_prem_wan-to-core_wan.tunnel_count) :
       format("%s-%02d", k, idx) => {
         name = format("vpn-%s-%s-%s-%02d-%s",
           random_id.on_prem_wan-to-core_wan-seed.hex,

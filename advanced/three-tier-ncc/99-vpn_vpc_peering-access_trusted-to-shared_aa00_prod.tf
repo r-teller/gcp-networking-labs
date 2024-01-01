@@ -22,10 +22,10 @@ locals {
   access_trusted-to-shared_aa00_prod = {
     regions = ["us-east4"]
     networks = {
-      local  = "access_trusted_aa00",
+      local  = "access_trusted_transit",
       remote = "shared_aa00_prod",
     }
-
+    tunnel_count = 1
     # peerings = {
     #   hub = {
     #     ## VPC Peering from access-trusted-transit to shared-vpc-prod
@@ -57,7 +57,7 @@ locals {
         export_custom_routes = false,
         import_custom_routes = true,
       },
-    ]    
+    ]
   }
 
   _access_trusted-to-shared_aa00_prod-map = {
@@ -80,7 +80,7 @@ locals {
   }
 
   access_trusted-to-shared_aa00_prod-map = { for k, v in local._access_trusted-to-shared_aa00_prod-map : k => merge(v, {
-    tunnels : { for idx in range(2) :
+    tunnels : { for idx in range(local.access_trusted-to-shared_aa00_prod.tunnel_count) :
       format("%s-%02d", k, idx) => {
         name = format("vpn-%s-%s-%s-%02d-%s",
           random_id.access_trusted-to-shared_aa00_prod-seed.hex,
@@ -295,7 +295,7 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_prod" {
 }
 
 resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod" {
-  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_prod : k => v if startswith(k, "access_trusted_aa00") }
+  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_prod : k => v if startswith(k, "access_trusted_transit") }
 
   project = var.project_id
 
@@ -303,7 +303,7 @@ resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod
 
   location = each.value.region
 
-  hub = google_network_connectivity_hub.access_trusted_aa00.id
+  hub = google_network_connectivity_hub.access_trusted_transit.id
 
   linked_vpn_tunnels {
     site_to_site_data_transfer = true
