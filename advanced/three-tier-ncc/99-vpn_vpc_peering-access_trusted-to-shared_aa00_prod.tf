@@ -128,6 +128,7 @@ locals {
 }
 
 ## Used to workaround multiple VPC Peering update issue
+## => https://github.com/hashicorp/terraform-provider-google/issues/3034
 resource "time_sleep" "access_trusted-to-shared_aa00_prod" {
   create_duration = "5s"
   depends_on = [
