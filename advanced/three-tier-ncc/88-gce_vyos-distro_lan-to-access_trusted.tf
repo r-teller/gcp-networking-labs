@@ -96,16 +96,26 @@ locals {
 
 resource "null_resource" "distro_lan-to-access_trusted-vyos" {
   depends_on = [
-    google_network_connectivity_hub.core_wan,
     google_network_connectivity_hub.distro_lan,
-    google_compute_router.core_wan,
+    google_network_connectivity_hub.access_trusted_transit,
+    google_network_connectivity_hub.access_trusted_aa00,
+    google_network_connectivity_hub.access_trusted_ab00,
     google_compute_router.distro_lan,
-    google_compute_subnetwork.core_wan,
+    google_compute_router.access_trusted_transit,
+    google_compute_router.access_trusted_aa00,
+    google_compute_router.access_trusted_ab00,
     google_compute_subnetwork.distro_lan,
-    google_compute_router_interface.core_wan-appliance-nic0,
-    google_compute_router_interface.core_wan-appliance-nic1,
+    google_compute_subnetwork.access_trusted_transit,
+    google_compute_subnetwork.access_trusted_ab00,
+    google_compute_subnetwork.access_trusted_ab00,
     google_compute_router_interface.distro_lan-appliance-nic0,
     google_compute_router_interface.distro_lan-appliance-nic1,
+    google_compute_router_interface.access_trusted_transit-appliance-nic0,
+    google_compute_router_interface.access_trusted_transit-appliance-nic1,
+    google_compute_router_interface.access_trusted_aa00-appliance-nic0,
+    google_compute_router_interface.access_trusted_aa00-appliance-nic1,
+    google_compute_router_interface.access_trusted_ab00-appliance-nic0,
+    google_compute_router_interface.access_trusted_ab00-appliance-nic1,
   ]
 }
 

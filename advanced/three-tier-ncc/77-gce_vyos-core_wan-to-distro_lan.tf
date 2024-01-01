@@ -102,6 +102,7 @@ resource "null_resource" "core_wan-to-distro_lan-vyos" {
     google_compute_router_interface.distro_lan-appliance-nic1,
   ]
 }
+
 resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
   for_each     = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
   name         = each.key

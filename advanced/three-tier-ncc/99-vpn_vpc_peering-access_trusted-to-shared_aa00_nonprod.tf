@@ -9,6 +9,15 @@ resource "random_integer" "access_trusted-to-shared_aa00_nonprod" {
   seed     = format("%s-%s", random_id.access_trusted-to-shared_aa00_nonprod-seed.hex, each.key)
 }
 
+resource "null_resource" "access_trusted-to-shared_aa00_nonprod" {
+  depends_on = [
+    google_compute_network.access_trusted_transit,
+    google_compute_network.access_trusted_aa00,
+    google_compute_network.shared_aa00_nonprod,
+    google_network_connectivity_hub.access_trusted_aa00,
+  ]
+}
+
 locals {
   access_trusted-to-shared_aa00_nonprod = {
     regions = ["us-east4"]
@@ -17,6 +26,22 @@ locals {
       remote = "shared_aa00_nonprod",
     }
     tunnel_count = 1
+    # peerings = {
+    #   hub = {
+    #     ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
+    #     local                = "access_trusted_transit",
+    #     remote               = "shared_aa00_nonprod",
+    #     export_custom_routes = true,
+    #     import_custom_routes = false,
+    #   },
+    #   spoke = {
+    #     ## VPC Peering from shared-vpc-nonprod to access-trusted-transit
+    #     local                = "shared_aa00_nonprod",
+    #     remote               = "access_trusted_transit",
+    #     export_custom_routes = false,
+    #     import_custom_routes = true,
+    #   },
+    # }
     peerings = [
       {
         ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
@@ -102,6 +127,14 @@ locals {
   }
 }
 
+## Used to workaround multiple VPC Peering update issue
+resource "time_sleep" "access_trusted-to-shared_aa00_nonprod" {
+  create_duration = "5s"
+  depends_on = [
+    null_resource.access_trusted-to-shared_aa00_nonprod,
+  ]
+}
+
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network_peering
 resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod" {
   for_each = { for peering in local.access_trusted-to-shared_aa00_nonprod.peerings : format("%s-%s", peering.local, peering.remote) => peering }
@@ -117,10 +150,46 @@ resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod
 
 
   depends_on = [
-    google_compute_network.shared_aa00_nonprod,
-    google_compute_network.access_trusted_transit,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
+    time_sleep.access_trusted-to-shared_aa00_nonprod,
   ]
 }
+
+
+# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network_peering
+# resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod-hub" {
+#   name = format("peer-%s-%s-%s",
+#     random_id.access_trusted-to-shared_aa00_nonprod-seed.hex,
+#     local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.local].prefix,
+#     random_id.id.hex
+#   )
+#   network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.local].prefix, random_id.id.hex))
+#   peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.remote].prefix, random_id.id.hex))
+#   import_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.hub.import_custom_routes
+#   export_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.hub.export_custom_routes
+
+#   depends_on = [
+#     null_resource.access_trusted-to-shared_aa00_nonprod,
+#     time_sleep.access_trusted-to-shared_aa00_nonprod,
+#   ]
+# }
+
+# resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod-spoke" {
+#   name = format("peer-%s-%s-%s",
+#     random_id.access_trusted-to-shared_aa00_nonprod-seed.hex,
+#     local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.local].prefix,
+#     random_id.id.hex
+#   )
+#   network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.local].prefix, random_id.id.hex))
+#   peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.remote].prefix, random_id.id.hex))
+#   import_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.import_custom_routes
+#   export_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.export_custom_routes
+
+#   depends_on = [
+#     null_resource.access_trusted-to-shared_aa00_nonprod,
+#     google_compute_network_peering.access_trusted-to-shared_aa00_nonprod-hub,
+#   ]
+# }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ha_vpn_gateway
 resource "google_compute_ha_vpn_gateway" "access_trusted-to-shared_aa00_nonprod" {
@@ -133,7 +202,7 @@ resource "google_compute_ha_vpn_gateway" "access_trusted-to-shared_aa00_nonprod"
   network  = each.value.network
 
   depends_on = [
-    google_compute_network.shared_aa00_nonprod,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
     google_compute_network.access_trusted_aa00,
   ]
 }
@@ -155,7 +224,7 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_nonprod" {
   }
 
   depends_on = [
-    google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
   ]
 }
 
@@ -175,8 +244,9 @@ resource "google_compute_vpn_tunnel" "access_trusted-to-shared_aa00_nonprod" {
   vpn_gateway                     = each.value.self_name
 
   depends_on = [
-    google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
     google_compute_router.access_trusted-to-shared_aa00_nonprod,
+    google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod,
   ]
 }
 
@@ -197,7 +267,7 @@ resource "google_compute_router_interface" "access_trusted-to-shared_aa00_nonpro
   vpn_tunnel = each.value.name
 
   depends_on = [
-    google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
     google_compute_router.access_trusted-to-shared_aa00_nonprod,
     google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod,
   ]
@@ -220,9 +290,8 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_nonprod" {
   interface = each.value.name
 
   depends_on = [
-    google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod,
+    null_resource.access_trusted-to-shared_aa00_nonprod,
     google_compute_router.access_trusted-to-shared_aa00_nonprod,
-    google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod,
     google_compute_router_interface.access_trusted-to-shared_aa00_nonprod,
   ]
 }
@@ -244,8 +313,8 @@ resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_nonp
   }
 
   depends_on = [
-    google_compute_router.access_trusted_aa00,
-    google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod
+    null_resource.access_trusted-to-shared_aa00_nonprod,
+    google_compute_vpn_tunnel.access_trusted-to-shared_aa00_nonprod,
   ]
 }
 
