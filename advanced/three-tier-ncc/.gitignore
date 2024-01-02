@@ -2,6 +2,8 @@
 **/.staging/
 **/.staging/*
 
+gitignore.tf
+
 # .terraform directory
 **/.terraform/*
 

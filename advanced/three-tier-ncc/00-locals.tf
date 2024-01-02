@@ -30,6 +30,28 @@ locals {
     on_prem_wan = {
       prefix = "on-prem-wan"
       asn    = 64512
+      summary_ip_ranges = {
+        # "us-east4" : [
+        #   "10.0.0.0/8",
+        #   "172.16.0.0/12",
+        #   "192.168.0.0/16",
+        # ],
+        # "us-west1" : [
+        #   "10.0.0.0/8",
+        #   "172.16.0.0/12",
+        #   "192.168.0.0/16",
+        # ],
+        # "asia-southeast1" : [
+        #   "10.0.0.0/8",
+        #   "172.16.0.0/12",
+        #   "192.168.0.0/16",
+        # ],
+        # "europe-west3" : [
+        #   "10.0.0.0/8",
+        #   "172.16.0.0/12",
+        #   "192.168.0.0/16",
+        # ],
+      }
 
       subnetworks = [
         {
@@ -102,22 +124,22 @@ locals {
       subnetworks = [
         {
           region = "us-east4",
-          ip_cidr_range : "172.17.0.0/24",
+          ip_cidr_range : "172.18.0.0/24",
           tags = ["network_appliance"],
         },
         {
           region = "us-west1",
-          ip_cidr_range : "172.17.1.0/24",
+          ip_cidr_range : "172.18.1.0/24",
           tags = ["network_appliance"],
         },
         {
           region = "asia-southeast1",
-          ip_cidr_range : "172.17.2.0/24",
+          ip_cidr_range : "172.18.2.0/24",
           tags = ["network_appliance"],
         },
         {
           region = "europe-west3",
-          ip_cidr_range : "172.17.3.0/24",
+          ip_cidr_range : "172.18.3.0/24",
           tags = ["network_appliance"],
         },
       ]
@@ -125,7 +147,7 @@ locals {
 
     access_trusted_transit = {
       prefix = "access-trusted-transit"
-      asn    = 64514
+      asn    = 64515
       subnetworks = [
         {
 
@@ -153,7 +175,7 @@ locals {
 
     access_trusted_aa00 = {
       prefix = "access-trusted-aa00"
-      asn    = 64515
+      asn    = 64516
       summary_ip_ranges = {
         "us-east4" : [
           "10.0.0.0/16"
@@ -195,7 +217,7 @@ locals {
 
     access_trusted_ab00 = {
       prefix = "access-trusted-ab00"
-      asn    = 64516
+      asn    = 64517
       subnetworks = [
         {
 
@@ -223,7 +245,7 @@ locals {
 
     shared_aa00_prod = {
       prefix = "shared-aa00-prod"
-      asn    = 4200000000
+      asn    = 4200000001
       summary_ip_ranges = {
         "us-east4" : ["10.0.96.0/22"]
       }
@@ -236,7 +258,7 @@ locals {
     }
     shared_aa00_nonprod = {
       prefix = "shared-aa00-nonprod"
-      asn    = 4200000000
+      asn    = 4200000002
       summary_ip_ranges = {
         "us-east4" : ["10.0.0.0/21"]
       }

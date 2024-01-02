@@ -25,23 +25,7 @@ locals {
       local  = "access_trusted_transit",
       remote = "shared_aa00_nonprod",
     }
-    tunnel_count = 1
-    # peerings = {
-    #   hub = {
-    #     ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
-    #     local                = "access_trusted_transit",
-    #     remote               = "shared_aa00_nonprod",
-    #     export_custom_routes = true,
-    #     import_custom_routes = false,
-    #   },
-    #   spoke = {
-    #     ## VPC Peering from shared-vpc-nonprod to access-trusted-transit
-    #     local                = "shared_aa00_nonprod",
-    #     remote               = "access_trusted_transit",
-    #     export_custom_routes = false,
-    #     import_custom_routes = true,
-    #   },
-    # }
+    tunnel_count = 0
     peerings = [
       {
         ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
@@ -156,42 +140,6 @@ resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod
   ]
 }
 
-
-# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network_peering
-# resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod-hub" {
-#   name = format("peer-%s-%s-%s",
-#     random_id.access_trusted-to-shared_aa00_nonprod-seed.hex,
-#     local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.local].prefix,
-#     random_id.id.hex
-#   )
-#   network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.local].prefix, random_id.id.hex))
-#   peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.hub.remote].prefix, random_id.id.hex))
-#   import_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.hub.import_custom_routes
-#   export_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.hub.export_custom_routes
-
-#   depends_on = [
-#     null_resource.access_trusted-to-shared_aa00_nonprod,
-#     time_sleep.access_trusted-to-shared_aa00_nonprod,
-#   ]
-# }
-
-# resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod-spoke" {
-#   name = format("peer-%s-%s-%s",
-#     random_id.access_trusted-to-shared_aa00_nonprod-seed.hex,
-#     local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.local].prefix,
-#     random_id.id.hex
-#   )
-#   network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.local].prefix, random_id.id.hex))
-#   peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.remote].prefix, random_id.id.hex))
-#   import_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.import_custom_routes
-#   export_custom_routes = local.access_trusted-to-shared_aa00_nonprod.peerings.spoke.export_custom_routes
-
-#   depends_on = [
-#     null_resource.access_trusted-to-shared_aa00_nonprod,
-#     google_compute_network_peering.access_trusted-to-shared_aa00_nonprod-hub,
-#   ]
-# }
-
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ha_vpn_gateway
 resource "google_compute_ha_vpn_gateway" "access_trusted-to-shared_aa00_nonprod" {
   for_each = local.access_trusted-to-shared_aa00_nonprod-map
@@ -221,7 +169,7 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_nonprod" {
   bgp {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = ["ALL_SUBNETS"]
+    advertised_groups = []
   }
 
   depends_on = [
@@ -279,10 +227,11 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_nonprod" {
 
   project = var.project_id
 
-  name     = each.value.name
-  region   = each.value.region
-  router   = each.value.router
-  peer_asn = each.value.peer_asn
+  name                      = each.value.name
+  region                    = each.value.region
+  router                    = each.value.router
+  peer_asn                  = each.value.peer_asn
+  advertised_route_priority = 200
   peer_ip_address = (
     each.value.is_local
     ? cidrhost(cidrsubnet("169.254.0.0/16", 14, random_integer.access_trusted-to-shared_aa00_nonprod[each.value.self_key].result), 2)
@@ -298,7 +247,10 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_nonprod" {
 }
 
 resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_nonprod" {
-  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod : k => v if startswith(k, "access_trusted_transit") }
+  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod : k => v if(
+    startswith(k, "access_trusted_transit") &&
+    length(merge(values(local.access_trusted-to-shared_aa00_nonprod-map).*.tunnels...)) > 0
+  ) }
 
   project = var.project_id
 
