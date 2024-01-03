@@ -114,7 +114,7 @@ resource "google_compute_subnetwork" "distro_lan" {
 
   project = var.project_id
 
-  name = format("%s-%s-%s", local._networks.distro_lan.prefix, replace(each.value.ip_cidr_range, "//|\\./", "-"), random_id.id.hex)
+  name    = format("%s-%s-%s", local._networks.distro_lan.prefix, replace(each.value.ip_cidr_range, "//|\\./", "-"), random_id.id.hex)
   network = google_compute_network.distro_lan.self_link
 
   private_ip_google_access = true
@@ -135,7 +135,7 @@ resource "google_compute_router" "distro_lan" {
   bgp {
     asn               = local._networks.distro_lan.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks.distro_lan, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
       for_each = local._networks.distro_lan.summary_ip_ranges[each.key]

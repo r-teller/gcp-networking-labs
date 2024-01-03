@@ -113,6 +113,14 @@ resource "google_compute_subnetwork" "shared_aa00_prod" {
   private_ip_google_access = true
   ip_cidr_range            = each.value.ip_cidr_range
   region                   = each.value.region
+
+  dynamic "secondary_ip_range" {
+    for_each = try(toset(each.value.secondary_ip_ranges), [])
+    content {
+      range_name    = format("%s-%s-%s", local._networks.shared_aa00_prod.prefix, replace(secondary_ip_range.value, "//|\\./", "-"), random_id.id.hex)
+      ip_cidr_range = secondary_ip_range.value
+    }
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router
@@ -128,7 +136,7 @@ resource "google_compute_router" "shared_aa00_prod" {
   bgp {
     asn               = local._networks.shared_aa00_prod.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks.shared_aa00_prod, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
       for_each = local._networks.shared_aa00_prod.summary_ip_ranges[each.key]
@@ -155,4 +163,41 @@ resource "google_compute_router_nat" "shared_aa00_prod" {
   depends_on = [
     google_compute_router.shared_aa00_prod
   ]
+}
+
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_global_address
+resource "google_compute_global_address" "shared_aa00_prod" {
+  for_each = { for x in lookup(local._networks.shared_aa00_prod, "private_service_ranges", []) : x.ip_cidr_range => x }
+
+  project = var.project_id
+
+  name          = format("%s-%s-%s-%s", local._networks.shared_aa00_prod.prefix, local._regions[each.value.region], replace(each.value.ip_cidr_range, "//|\\./", "-"), random_id.id.hex)
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  address       = split("/", each.value.ip_cidr_range)[0]
+  prefix_length = split("/", each.value.ip_cidr_range)[1]
+  network       = google_compute_network.shared_aa00_prod.self_link
+}
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection
+resource "google_service_networking_connection" "shared_aa00_prod" {
+  count                   = length(google_compute_global_address.shared_aa00_prod) != 0 ? 1 : 0
+  
+  network                 = google_compute_network.shared_aa00_prod.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = values(google_compute_global_address.shared_aa00_prod).*.name
+}
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network_peering_routes_config
+resource "google_compute_network_peering_routes_config" "shared_aa00_prod" {
+  count = length(google_compute_global_address.shared_aa00_prod) != 0 ? 1 : 0
+
+  project = var.project_id
+
+  peering = google_service_networking_connection.shared_aa00_prod[0].peering
+  network = google_compute_network.shared_aa00_prod.name
+
+  import_custom_routes = true
+  export_custom_routes = true
 }

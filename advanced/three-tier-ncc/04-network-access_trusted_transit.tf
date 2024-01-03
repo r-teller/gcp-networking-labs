@@ -135,7 +135,7 @@ resource "google_compute_router" "access_trusted_transit" {
   bgp {
     asn               = local._networks.access_trusted_transit.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks.access_trusted_transit, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
       for_each = try(local._networks.access_trusted_transit.summary_ip_ranges[each.key], [])

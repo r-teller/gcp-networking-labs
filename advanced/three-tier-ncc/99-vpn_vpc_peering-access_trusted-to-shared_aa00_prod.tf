@@ -132,6 +132,8 @@ resource "google_compute_network_peering" "access_trusted-to-shared_aa00_prod" {
   peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.remote].prefix, random_id.id.hex))
   export_custom_routes = each.value.export_custom_routes
   import_custom_routes = each.value.import_custom_routes
+  export_subnet_routes_with_public_ip = false
+  import_subnet_routes_with_public_ip = false
 
   depends_on = [
     null_resource.access_trusted-to-shared_aa00_prod,
@@ -168,7 +170,7 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_prod" {
   bgp {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks[each.value.key], "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
   }
 
   depends_on = [

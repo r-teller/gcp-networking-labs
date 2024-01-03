@@ -128,7 +128,7 @@ resource "google_compute_router" "on_prem_wan" {
   bgp {
     asn               = local._networks.on_prem_wan.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks.on_prem_wan, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
   }
 }
 

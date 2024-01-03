@@ -115,7 +115,7 @@ resource "google_compute_router" "on_prem_wan-to-core_wan" {
   bgp {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks[each.value.key], "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
       for_each = try(local._networks[each.value.key].summary_ip_ranges[each.value.region], [])

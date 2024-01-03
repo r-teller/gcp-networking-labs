@@ -25,7 +25,7 @@ locals {
       local  = "access_trusted_transit",
       remote = "shared_aa00_nonprod",
     }
-    tunnel_count = 0
+    tunnel_count = 1
     peerings = [
       {
         ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
@@ -128,10 +128,12 @@ resource "google_compute_network_peering" "access_trusted-to-shared_aa00_nonprod
     local._networks[each.value.local].prefix,
     random_id.id.hex
   )
-  network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.local].prefix, random_id.id.hex))
-  peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.remote].prefix, random_id.id.hex))
-  export_custom_routes = each.value.export_custom_routes
-  import_custom_routes = each.value.import_custom_routes
+  network                             = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.local].prefix, random_id.id.hex))
+  peer_network                        = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.remote].prefix, random_id.id.hex))
+  export_custom_routes                = each.value.export_custom_routes
+  import_custom_routes                = each.value.import_custom_routes
+  export_subnet_routes_with_public_ip = false
+  import_subnet_routes_with_public_ip = false
 
 
   depends_on = [
@@ -169,7 +171,7 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_nonprod" {
   bgp {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
-    advertised_groups = []
+    advertised_groups = lookup(local._networks[each.value.key], "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
   }
 
   depends_on = [
