@@ -20,7 +20,7 @@ resource "null_resource" "access_trusted-to-shared_aa00_nonprod" {
 
 locals {
   access_trusted-to-shared_aa00_nonprod = {
-    regions = ["us-east4"]
+    regions = ["us-east4", "us-west1"]
     networks = {
       local  = "access_trusted_transit",
       remote = "shared_aa00_nonprod",

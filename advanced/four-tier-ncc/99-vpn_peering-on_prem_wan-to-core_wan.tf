@@ -11,12 +11,12 @@ resource "random_integer" "on_prem_wan-to-core_wan" {
 
 locals {
   on_prem_wan-to-core_wan = {
-    regions = ["us-east4"]
+    regions = ["us-east4","us-west1"]
     networks = {
       local  = "on_prem_wan",
       remote = "core_wan",
     }
-    tunnel_count = 1
+    tunnel_count = 2
   }
 
   _on_prem_wan-to-core_wan-map = {

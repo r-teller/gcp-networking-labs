@@ -1,44 +1,36 @@
-resource "random_id" "distro_lan-to-access_trusted-seed" {
+resource "random_id" "core_wan-to-distro_lan-seed" {
   byte_length = 2
-
 }
 
+
 locals {
-  distro_lan-to-access_trusted-vyos = {
-    asn          = 65533
-    prefix       = "distro-lan-to-access-trusted"
-    machine_type = "n2d-standard-4"
+  core_wan-to-distro_lan-vyos = {
+    asn          = 65534
+    prefix       = "core-wan-to-distro-lan"
+    machine_type = "n2d-standard-2"
     zones = {
       "us-east4-a" = 1
-      "us-west1-a" = 0
+      "us-west1-a" = 1
     }
     service_account = google_service_account.vyos_compute_sa.email
     interfaces = {
       0 = {
-        network        = "distro_lan"
+        network        = "core_wan"
         subnetwork_tag = "network_appliance"
       }
       1 = {
-        network        = "access_trusted_transit"
-        subnetwork_tag = "network_appliance"
-      }
-      2 = {
-        network        = "access_trusted_aa00"
-        subnetwork_tag = "network_appliance"
-      }
-      3 = {
-        network        = "access_trusted_ab00"
+        network        = "distro_lan"
         subnetwork_tag = "network_appliance"
       }
     }
   }
 
-  _distro_lan-to-access_trusted-vyos-map = merge([
-    for k1, v1 in local.distro_lan-to-access_trusted-vyos.zones : {
+  _core_wan-to-distro_lan-vyos-map = merge([
+    for k1, v1 in local.core_wan-to-distro_lan-vyos.zones : {
       for idx in range(v1) :
-      format("%s-vyos-%s-%02d", local.distro_lan-to-access_trusted-vyos.prefix, k1, idx) => {
+      format("%s-vyos-%s-%02d", local.core_wan-to-distro_lan-vyos.prefix, k1, idx) => {
         name = format("%s-vyos-%s-%02d-%s",
-          local.distro_lan-to-access_trusted-vyos.prefix,
+          local.core_wan-to-distro_lan-vyos.prefix,
           join("", [
             local.continent_short_name[split("-", k1)[0]],
             replace(join("", slice(split("-", k1), 1, 3)), "/(n)orth|(s)outh|(e)ast|(w)est|(c)entral/", "$1$2$3$4$5")
@@ -46,21 +38,20 @@ locals {
           idx,
           random_id.id.hex
         )
-        machine_type    = local.distro_lan-to-access_trusted-vyos.machine_type
+        machine_type    = local.core_wan-to-distro_lan-vyos.machine_type
         zone            = k1
         region          = regex("^(.*)-.", k1)[0]
-        service_account = local.distro_lan-to-access_trusted-vyos.service_account
+        service_account = local.core_wan-to-distro_lan-vyos.service_account
       }
     }
   ]...)
 
-  distro_lan-to-access_trusted-vyos-map = {
-    for k1, v1 in local._distro_lan-to-access_trusted-vyos-map : k1 => merge(v1, {
+  core_wan-to-distro_lan-vyos-map = {
+    for k1, v1 in local._core_wan-to-distro_lan-vyos-map : k1 => merge(v1, {
 
-      bucket_object = format("distro_lan-to-access_trusted-vyos-%s.conf", local._regions[v1.region])
+      bucket_object = format("core_wan-to-distro_lan-vyos-%s.conf", local._regions[v1.region])
 
-      subnetworks = { for k2, v2 in local.distro_lan-to-access_trusted-vyos.interfaces : format("%s-%s", k1, k2) => {
-        # instance = v1.name
+      subnetworks = { for k2, v2 in local.core_wan-to-distro_lan-vyos.interfaces : format("%s-%s", k1, k2) => {
         cidr_range = [
           for subnetwork in local._networks[v2.network].subnetworks :
           subnetwork.ip_cidr_range if(
@@ -94,33 +85,23 @@ locals {
   }
 }
 
-resource "null_resource" "distro_lan-to-access_trusted-vyos" {
+resource "null_resource" "core_wan-to-distro_lan-vyos" {
   depends_on = [
+    google_network_connectivity_hub.core_wan,
     google_network_connectivity_hub.distro_lan,
-    google_network_connectivity_hub.access_trusted_transit,
-    google_network_connectivity_hub.access_trusted_aa00,
-    google_network_connectivity_hub.access_trusted_ab00,
+    google_compute_router.core_wan,
     google_compute_router.distro_lan,
-    google_compute_router.access_trusted_transit,
-    google_compute_router.access_trusted_aa00,
-    google_compute_router.access_trusted_ab00,
+    google_compute_subnetwork.core_wan,
     google_compute_subnetwork.distro_lan,
-    google_compute_subnetwork.access_trusted_transit,
-    google_compute_subnetwork.access_trusted_ab00,
-    google_compute_subnetwork.access_trusted_ab00,
+    google_compute_router_interface.core_wan-appliance-nic0,
+    google_compute_router_interface.core_wan-appliance-nic1,
     google_compute_router_interface.distro_lan-appliance-nic0,
     google_compute_router_interface.distro_lan-appliance-nic1,
-    google_compute_router_interface.access_trusted_transit-appliance-nic0,
-    google_compute_router_interface.access_trusted_transit-appliance-nic1,
-    google_compute_router_interface.access_trusted_aa00-appliance-nic0,
-    google_compute_router_interface.access_trusted_aa00-appliance-nic1,
-    google_compute_router_interface.access_trusted_ab00-appliance-nic0,
-    google_compute_router_interface.access_trusted_ab00-appliance-nic1,
   ]
 }
 
-resource "google_compute_address" "distro_lan-to-access_trusted-vyos" {
-  for_each     = merge(values(local.distro_lan-to-access_trusted-vyos-map).*.subnetworks...)
+resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
+  for_each     = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
   name         = each.key
   project      = var.project_id
   region       = each.value.region
@@ -129,12 +110,12 @@ resource "google_compute_address" "distro_lan-to-access_trusted-vyos" {
   subnetwork   = format("%s-%s", each.value.subnetwork, random_id.id.hex)
 
   depends_on = [
-    null_resource.distro_lan-to-access_trusted-vyos,
+    null_resource.core_wan-to-distro_lan-vyos,
   ]
 }
 
-resource "google_storage_bucket_object" "distro_lan-to-access_trusted-vyos" {
-  for_each = toset(distinct(values(local.distro_lan-to-access_trusted-vyos-map).*.bucket_object))
+resource "google_storage_bucket_object" "core_wan-to-distro_lan-vyos" {
+  for_each = toset(distinct(values(local.core_wan-to-distro_lan-vyos-map).*.bucket_object))
   name     = each.key
   bucket   = google_storage_bucket.bucket.name
   content  = "."
@@ -144,8 +125,8 @@ resource "google_storage_bucket_object" "distro_lan-to-access_trusted-vyos" {
   }
 }
 
-resource "google_pubsub_subscription" "distro_lan-to-access_trusted-vyos" {
-  for_each = local.distro_lan-to-access_trusted-vyos-map
+resource "google_pubsub_subscription" "core_wan-to-distro_lan-vyos" {
+  for_each = local.core_wan-to-distro_lan-vyos-map
 
   project = var.project_id
   name    = each.value.name
@@ -176,14 +157,14 @@ resource "google_pubsub_subscription" "distro_lan-to-access_trusted-vyos" {
 # }
 
 
-resource "google_compute_instance" "distro_lan-to-access_trusted-vyos" {
-  for_each = local.distro_lan-to-access_trusted-vyos-map
+resource "google_compute_instance" "core_wan-to-distro_lan-vyos" {
+  for_each = local.core_wan-to-distro_lan-vyos-map
 
   depends_on = [
-    null_resource.distro_lan-to-access_trusted-vyos,
-    google_storage_bucket_object.distro_lan-to-access_trusted-vyos,
-    google_pubsub_subscription.distro_lan-to-access_trusted-vyos,
-    google_compute_address.distro_lan-to-access_trusted-vyos,
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_storage_bucket_object.core_wan-to-distro_lan-vyos,
+    google_pubsub_subscription.core_wan-to-distro_lan-vyos,
+    google_compute_address.core_wan-to-distro_lan-vyos,
   ]
 
   project = var.project_id
@@ -205,10 +186,9 @@ resource "google_compute_instance" "distro_lan-to-access_trusted-vyos" {
     mode = "READ_WRITE"
   }
 
-  allow_stopping_for_update = true
-  can_ip_forward            = true
-  deletion_protection       = false
-  enable_display            = false
+  can_ip_forward      = true
+  deletion_protection = false
+  enable_display      = false
 
   machine_type = each.value.machine_type
 
@@ -222,7 +202,7 @@ resource "google_compute_instance" "distro_lan-to-access_trusted-vyos" {
   dynamic "network_interface" {
     for_each = each.value.subnetworks
     content {
-      network_ip         = google_compute_address.distro_lan-to-access_trusted-vyos[network_interface.key].address
+      network_ip         = google_compute_address.core_wan-to-distro_lan-vyos[network_interface.key].address
       subnetwork         = format("%s-%s", network_interface.value.subnetwork, random_id.id.hex)
       subnetwork_project = var.project_id
     }
@@ -245,19 +225,19 @@ resource "google_compute_instance" "distro_lan-to-access_trusted-vyos" {
   }
 }
 
-resource "google_network_connectivity_spoke" "distro_lan-to-access_trusted-vyos" {
-  for_each = { for x in distinct(values(merge(values(local.distro_lan-to-access_trusted-vyos-map).*.subnetworks...))) : x.ncc_spoke => x }
+resource "google_network_connectivity_spoke" "core_wan-to-distro_lan-vyos" {
+  for_each = { for x in distinct(values(merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...))) : x.ncc_spoke => x }
 
   project = var.project_id
 
-  name     = format("appliance-%s-%s-%s", random_id.distro_lan-to-access_trusted-seed.hex, each.key, random_id.id.hex)
+  name     = format("appliance-%s-%s-%s", random_id.core_wan-to-distro_lan-seed.hex, each.key, random_id.id.hex)
   hub      = format("%s-%s", each.value.network_prefix, random_id.id.hex)
   location = each.value.region
 
   linked_router_appliance_instances {
     site_to_site_data_transfer = true
     dynamic "instances" {
-      for_each = { for k1, v1 in google_compute_instance.distro_lan-to-access_trusted-vyos : k1 => v1 if startswith(v1.zone, each.value.region) }
+      for_each = { for k1, v1 in google_compute_instance.core_wan-to-distro_lan-vyos : k1 => v1 if startswith(v1.zone, each.value.region) }
       content {
         virtual_machine = instances.value.self_link
         ip_address = [
@@ -268,15 +248,15 @@ resource "google_network_connectivity_spoke" "distro_lan-to-access_trusted-vyos"
   }
 
   depends_on = [
-    null_resource.distro_lan-to-access_trusted-vyos,
-    google_compute_address.distro_lan-to-access_trusted-vyos,
-    google_compute_instance.distro_lan-to-access_trusted-vyos,
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_compute_address.core_wan-to-distro_lan-vyos,
+    google_compute_instance.core_wan-to-distro_lan-vyos,
   ]
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
-resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer0" {
-  for_each = merge(values(local.distro_lan-to-access_trusted-vyos-map).*.subnetworks...)
+resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer0" {
+  for_each = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
 
   project = var.project_id
 
@@ -285,20 +265,20 @@ resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer0" 
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 0), random_id.id.hex)
 
-  peer_asn                  = local.distro_lan-to-access_trusted-vyos.asn
-  router_appliance_instance = google_compute_instance.distro_lan-to-access_trusted-vyos[regex("^(.*)-.", each.key)[0]].self_link
-  peer_ip_address           = google_compute_address.distro_lan-to-access_trusted-vyos[each.key].address
+  peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
+  router_appliance_instance = google_compute_instance.core_wan-to-distro_lan-vyos[regex("^(.*)-.", each.key)[0]].self_link
+  peer_ip_address           = google_compute_address.core_wan-to-distro_lan-vyos[each.key].address
   advertised_route_priority = 100
 
   depends_on = [
-    null_resource.distro_lan-to-access_trusted-vyos,
-    google_compute_instance.distro_lan-to-access_trusted-vyos,
-    google_network_connectivity_spoke.distro_lan-to-access_trusted-vyos,
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_compute_instance.core_wan-to-distro_lan-vyos,
+    google_network_connectivity_spoke.core_wan-to-distro_lan-vyos,
   ]
 }
 
-resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer1" {
-  for_each = merge(values(local.distro_lan-to-access_trusted-vyos-map).*.subnetworks...)
+resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer1" {
+  for_each = merge(values(local.core_wan-to-distro_lan-vyos-map).*.subnetworks...)
 
   project = var.project_id
 
@@ -307,16 +287,16 @@ resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer1" 
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 1), random_id.id.hex)
 
-  peer_asn                  = local.distro_lan-to-access_trusted-vyos.asn
-  router_appliance_instance = google_compute_instance.distro_lan-to-access_trusted-vyos[regex("^(.*)-.", each.key)[0]].self_link
-  peer_ip_address           = google_compute_address.distro_lan-to-access_trusted-vyos[each.key].address
+  peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
+  router_appliance_instance = google_compute_instance.core_wan-to-distro_lan-vyos[regex("^(.*)-.", each.key)[0]].self_link
+  peer_ip_address           = google_compute_address.core_wan-to-distro_lan-vyos[each.key].address
   advertised_route_priority = 100
 
   depends_on = [
-    null_resource.distro_lan-to-access_trusted-vyos,
-    google_compute_router_peer.distro_lan-to-access_trusted-vyos-peer0,
-    google_compute_instance.distro_lan-to-access_trusted-vyos,
-    google_network_connectivity_spoke.distro_lan-to-access_trusted-vyos,
+    null_resource.core_wan-to-distro_lan-vyos,
+    google_compute_router_peer.core_wan-to-distro_lan-vyos-peer0,
+    google_compute_instance.core_wan-to-distro_lan-vyos,
+    google_network_connectivity_spoke.core_wan-to-distro_lan-vyos,
   ]
 }
 

@@ -4,4 +4,9 @@ This lab will build out an advanced GCP networking 4-tier (Core, Aggregation, Ac
 ## Aggregation    
 ## Access
 ## Shared
-![Alt text](images/overview.png)
+
+# Regional Overview
+![Alt text](<Four Tier NCC - Regional.png>)
+
+# Global Overview
+![Alt text](<Four Tier NCC - Global.png>)

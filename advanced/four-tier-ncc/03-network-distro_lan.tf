@@ -138,7 +138,7 @@ resource "google_compute_router" "distro_lan" {
     advertised_groups = lookup(local._networks.distro_lan, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
-      for_each = local._networks.distro_lan.summary_ip_ranges[each.key]
+      for_each = try(local._networks.distro_lan.summary_ip_ranges[each.key], [])
       content {
         range = advertised_ip_ranges.value
       }
