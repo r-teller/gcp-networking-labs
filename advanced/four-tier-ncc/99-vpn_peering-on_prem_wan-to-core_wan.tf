@@ -11,18 +11,22 @@ resource "random_integer" "on_prem_wan-to-core_wan" {
 
 locals {
   on_prem_wan-to-core_wan = {
-    regions = ["us-east4","us-west1"]
+    regions = ["us-east4", "us-west1"]
     networks = {
       local  = "on_prem_wan",
       remote = "core_wan",
     }
-    tunnel_count = 2
+    tunnel_count = 1
   }
 
   _on_prem_wan-to-core_wan-map = {
     for x in setproduct(values(local.on_prem_wan-to-core_wan.networks), local.on_prem_wan-to-core_wan.regions) :
     join("-", [x[0], x[1]]) => {
-      asn      = local._networks[x[0]].asn
+      asn = try(
+        local._networks[x[0]].regional_asn[x[1]],
+        local._networks[x[0]].shared_asn,
+        local._default_asn
+      )
       key      = x[0]
       is_local = local.on_prem_wan-to-core_wan.networks.local == x[0]
       name = format("vpn-%s-%s-%s-%s",
@@ -59,8 +63,16 @@ locals {
         ), v.region, idx)
         peer_asn = (
           v.is_local
-          ? local._networks[local.on_prem_wan-to-core_wan.networks.remote].asn
-          : local._networks[local.on_prem_wan-to-core_wan.networks.local].asn
+          ? try(
+            local._networks[local.on_prem_wan-to-core_wan.networks.remote].regional_asn[v.region],
+            local._networks[local.on_prem_wan-to-core_wan.networks.remote].shared_asn,
+            local._default_asn
+          )
+          : try(
+            local._networks[local.on_prem_wan-to-core_wan.networks.local].regional_asn[v.region],
+            local._networks[local.on_prem_wan-to-core_wan.networks.local].shared_asn,
+            local._default_asn
+          )
         )
         self_name = v.name
         peer_name = (

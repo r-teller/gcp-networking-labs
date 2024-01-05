@@ -5,7 +5,14 @@ resource "random_id" "distro_lan-to-access_trusted-seed" {
 
 locals {
   distro_lan-to-access_trusted-vyos = {
-    asn          = 65533
+    ## if regional ASN exists it will be preferred over the generic ASN
+    shared_asn = 65533
+    regional_asn = {
+      us-east4 : 4204100001,
+      us-west1 : 4214100001,
+      asia-southeast1 : 4224100001,
+      europe-west3 : 4234100001,
+    }
     prefix       = "distro-lan-to-access-trusted"
     machine_type = "n2d-standard-4"
     zones = {
@@ -60,7 +67,7 @@ locals {
       bucket_object = format("distro_lan-to-access_trusted-vyos-%s.conf", local._regions[v1.region])
 
       subnetworks = { for k2, v2 in local.distro_lan-to-access_trusted-vyos.interfaces : format("%s-%s", k1, k2) => {
-        # instance = v1.name
+        nic = format("eth%d", k2)
         cidr_range = [
           for subnetwork in local._networks[v2.network].subnetworks :
           subnetwork.ip_cidr_range if(
@@ -91,6 +98,31 @@ locals {
         }
       }
     })
+  }
+
+  distro_lan-to-access_trusted-vyos-bootstrap = { for k1, v1 in local.distro_lan-to-access_trusted-vyos-map : k1 => {
+    name = v1.name
+    local_asn = try(
+      local.distro_lan-to-access_trusted-vyos.regional_asn[v1.region],
+      local.distro_lan-to-access_trusted-vyos.shared_asn,
+      local._default_asn,
+    )
+
+    interfaces = { for k2, v2 in v1.subnetworks : k2 => {
+      network_prefix = v2.network_prefix
+      nic            = v2.nic
+      peer_addresses = [
+        cidrhost(v2.cidr_range, -3),
+        cidrhost(v2.cidr_range, -4)
+      ]
+      peer_asn = try(
+        local._networks[v2.network].regional_asn[v1.region],
+        local._networks[v2.network].shared_asn,
+        local._default_asn
+      )
+      }
+    }
+    }
   }
 }
 
@@ -133,11 +165,45 @@ resource "google_compute_address" "distro_lan-to-access_trusted-vyos" {
   ]
 }
 
+resource "local_file" "distro_lan-to-access_trusted-vyos" {
+  for_each = local.distro_lan-to-access_trusted-vyos-bootstrap
+  filename = "./config/${each.value.name}/config.boot"
+  content = templatefile("${path.module}/template/${local.distro_lan-to-access_trusted-vyos.prefix}/config.boot.tmpl",
+    {
+      "interfaces" : each.value.interfaces,
+      "asn" : each.value.local_asn,
+      "neighbors" : flatten([
+        for v1 in each.value.interfaces : [
+          for k2 in v1.peer_addresses : {
+            asn         = v1.peer_asn,
+            address     = k2,
+            network_tag = upper(v1.network_prefix)
+          }
+        ]
+      ])
+    }
+  )
+}
+
 resource "google_storage_bucket_object" "distro_lan-to-access_trusted-vyos" {
-  for_each = toset(distinct(values(local.distro_lan-to-access_trusted-vyos-map).*.bucket_object))
-  name     = each.key
+  for_each = local.distro_lan-to-access_trusted-vyos-bootstrap
+  name     = format("%s.conf", each.value.name)
   bucket   = google_storage_bucket.bucket.name
-  content  = "."
+  content = templatefile("${path.module}/template/${local.distro_lan-to-access_trusted-vyos.prefix}/config.boot.tmpl",
+    {
+      "interfaces" : each.value.interfaces,
+      "asn" : each.value.local_asn,
+      "neighbors" : flatten([
+        for v1 in each.value.interfaces : [
+          for k2 in v1.peer_addresses : {
+            asn         = v1.peer_asn,
+            address     = k2,
+            network_tag = upper(v1.network_prefix)
+          }
+        ]
+      ])
+    }
+  )
 
   lifecycle {
     ignore_changes = [detect_md5hash]
@@ -265,7 +331,12 @@ resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer0" 
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 0), random_id.id.hex)
 
-  peer_asn                  = local.distro_lan-to-access_trusted-vyos.asn
+  peer_asn = try(
+    local.distro_lan-to-access_trusted-vyos.regional_asn[each.value.region],
+    local.distro_lan-to-access_trusted-vyos.shared_asn,
+    local._default_asn,
+  )
+
   router_appliance_instance = google_compute_instance.distro_lan-to-access_trusted-vyos[regex("^(.*)-.", each.key)[0]].self_link
   peer_ip_address           = google_compute_address.distro_lan-to-access_trusted-vyos[each.key].address
   advertised_route_priority = 100
@@ -287,7 +358,12 @@ resource "google_compute_router_peer" "distro_lan-to-access_trusted-vyos-peer1" 
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 1), random_id.id.hex)
 
-  peer_asn                  = local.distro_lan-to-access_trusted-vyos.asn
+  peer_asn = try(
+    local.distro_lan-to-access_trusted-vyos.regional_asn[each.value.region],
+    local.distro_lan-to-access_trusted-vyos.shared_asn,
+    local._default_asn,
+  )
+
   router_appliance_instance = google_compute_instance.distro_lan-to-access_trusted-vyos[regex("^(.*)-.", each.key)[0]].self_link
   peer_ip_address           = google_compute_address.distro_lan-to-access_trusted-vyos[each.key].address
   advertised_route_priority = 100

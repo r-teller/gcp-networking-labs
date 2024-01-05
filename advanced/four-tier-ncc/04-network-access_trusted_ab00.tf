@@ -133,7 +133,8 @@ resource "google_compute_router" "access_trusted_ab00" {
 
   region = each.key
   bgp {
-    asn               = local._networks.access_trusted_ab00.asn
+    # asn               = local._networks.access_trusted_ab00.asn
+    asn               = try(local._networks["access_trusted_ab00"].regional_asn[each.key], local._networks["access_trusted_ab00"].shared_asn, local._default_asn) 
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks.access_trusted_ab00, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 

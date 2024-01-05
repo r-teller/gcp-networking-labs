@@ -133,7 +133,8 @@ resource "google_compute_router" "distro_lan" {
 
   region = each.key
   bgp {
-    asn               = local._networks.distro_lan.asn
+    # asn               = local._networks.distro_lan.asn
+    asn               = try(local._networks["distro_lan"].regional_asn[each.key], local._networks["distro_lan"].shared_asn, local._default_asn)
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks.distro_lan, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 

@@ -10,7 +10,7 @@ resource "random_id" "id" {
 
 resource "google_service_account" "vyos_compute_sa" {
   project      = var.project_id
-  account_id   = "gce-vyos-network-appliance-sa"
+  account_id   = format("gce-vyos-appliance-sa-%s", random_id.id.hex)
   display_name = "Service Account mounted on gce-vyos-network-appliance-sa compute instances"
 }
 

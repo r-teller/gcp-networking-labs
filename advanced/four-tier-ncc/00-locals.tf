@@ -3,6 +3,7 @@ module "utils" {
 }
 
 locals {
+  _default_asn = 65534
   _regions = {
     "us-east4" : module.utils.region_short_name_map["us-east4"]
     "us-west1" : module.utils.region_short_name_map["us-west1"]
@@ -20,16 +21,13 @@ locals {
     us           = "us"
     me           = "me"
   }
-  # aggregated_advertisements = {
-  #   "us-east4" : [],
-  #   "us-west1" : [],
-  #   "asia-southeast1" : [],
-  #   "europe-west3" : [],
-  # }
+
   _networks = {
     on_prem_wan = {
-      prefix                  = "on-prem-wan"
-      asn                     = 64512
+      prefix = "on-prem-wan"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      shared_asn              = 16550
+      regional_asn            = {}
       advertise_local_subnets = false
       summary_ip_ranges = {
         "us-east4" : [
@@ -79,7 +77,13 @@ locals {
     }
 
     core_wan = {
-      asn                     = 64513
+      shared_asn = 64513
+      regional_asn = {
+        us-east4 : 4200000000
+        us-west1 : 4210000000
+        asia-southeast1 : 4220000000
+        europe-west3 : 4230000000
+      }
       prefix                  = "core-wan"
       advertise_local_subnets = false
       subnetworks = [
@@ -107,8 +111,15 @@ locals {
     }
 
     distro_lan = {
-      prefix                  = "distro-lan"
-      asn                     = 64514
+      prefix = "distro-lan"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      shared_asn = 64514
+      regional_asn = {
+        us-east4 : 4201000000,
+        us-west1 : 4211000000,
+        asia-southeast1 : 4221000000,
+        europe-west3 : 4231000000,
+      }
       advertise_local_subnets = false
       # summary_ip_ranges = {
       #   "us-east4" : [
@@ -149,8 +160,15 @@ locals {
     }
 
     access_trusted_transit = {
-      prefix                  = "access-trusted-transit"
-      asn                     = 64515
+      prefix = "access-trusted-transit"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      shared_asn = 64515
+      regional_asn = {
+        us-east4 : 4202000001,
+        us-west1 : 4212000001,
+        asia-southeast1 : 4222000001,
+        europe-west3 : 4232000001,
+      }
       advertise_local_subnets = false
       subnetworks = [
         {
@@ -179,7 +197,14 @@ locals {
 
     access_trusted_aa00 = {
       prefix = "access-trusted-aa00"
-      asn    = 64516
+      ## if regional ASN exists it will be preferred over the shared ASN
+      shared_asn = 64516
+      regional_asn = {
+        us-east4 : 4202000002,
+        us-west1 : 4212000002,
+        asia-southeast1 : 4222000002,
+        europe-west3 : 4232000002,
+      }
       advertise_local_subnets = false
       summary_ip_ranges = {
         "us-east4" : [
@@ -221,8 +246,15 @@ locals {
     }
 
     access_trusted_ab00 = {
-      prefix                  = "access-trusted-ab00"
-      asn                     = 64517
+      prefix = "access-trusted-ab00"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      shared_asn = 64517
+      regional_asn = {
+        us-east4 : 4202000003,
+        us-west1 : 4212000003,
+        asia-southeast1 : 4222000003,
+        europe-west3 : 4232000003,
+      }
       advertise_local_subnets = false
       subnetworks = [
         {
@@ -250,8 +282,14 @@ locals {
     }
 
     shared_aa00_prod = {
-      prefix                  = "shared-aa00-prod"
-      asn                     = 4200000001
+      prefix = "shared-aa00-prod"
+      ## if regional ASN exists it will be preferred over the shared ASN      
+      regional_asn = {
+        us-east4 : 4203000000,
+        us-west1 : 4213000000,
+        asia-southeast1 : 4223000000,
+        europe-west3 : 4233000000,
+      }
       advertise_local_subnets = false
       summary_ip_ranges = {
         "us-east4" : ["10.0.96.0/22"]
@@ -274,8 +312,14 @@ locals {
     }
 
     shared_aa00_nonprod = {
-      prefix                  = "shared-aa00-nonprod"
-      asn                     = 4200000002
+      prefix = "shared-aa00-nonprod"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      regional_asn = {
+        us-east4 : 4203000001,
+        us-west1 : 4213000001,
+        asia-southeast1 : 4223000001,
+        europe-west3 : 4233000001,
+      }
       advertise_local_subnets = false
       summary_ip_ranges = {
         "us-east4" : ["10.0.0.0/21"],

@@ -47,7 +47,11 @@ locals {
   _access_trusted-to-shared_aa00_prod-map = {
     for x in setproduct(values(local.access_trusted-to-shared_aa00_prod.networks), local.access_trusted-to-shared_aa00_prod.regions) :
     join("-", [x[0], x[1]]) => {
-      asn      = local._networks[x[0]].asn
+      asn = try(
+        local._networks[x[0]].regional_asn[x[1]],
+        local._networks[x[0]].shared_asn,
+        local._default_asn
+      )
       key      = x[0]
       is_local = local.access_trusted-to-shared_aa00_prod.networks.local == x[0]
       name = format("vpn-%s-%s-%s-%s",
@@ -84,8 +88,16 @@ locals {
         ), v.region, idx)
         peer_asn = (
           v.is_local
-          ? local._networks[local.access_trusted-to-shared_aa00_prod.networks.remote].asn
-          : local._networks[local.access_trusted-to-shared_aa00_prod.networks.local].asn
+          ? try(
+            local._networks[local.access_trusted-to-shared_aa00_prod.networks.remote].regional_asn[v.region],
+            local._networks[local.access_trusted-to-shared_aa00_prod.networks.remote].shared_asn,
+            local._default_asn
+          )
+          : try(
+            local._networks[local.access_trusted-to-shared_aa00_prod.networks.local].regional_asn[v.region],
+            local._networks[local.access_trusted-to-shared_aa00_prod.networks.local].shared_asn,
+            local._default_asn
+          )
         )
         self_name = v.name
         peer_name = (
@@ -128,10 +140,10 @@ resource "google_compute_network_peering" "access_trusted-to-shared_aa00_prod" {
     local._networks[each.value.local].prefix,
     random_id.id.hex
   )
-  network              = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.local].prefix, random_id.id.hex))
-  peer_network         = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.remote].prefix, random_id.id.hex))
-  export_custom_routes = each.value.export_custom_routes
-  import_custom_routes = each.value.import_custom_routes
+  network                             = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.local].prefix, random_id.id.hex))
+  peer_network                        = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", local._networks[each.value.remote].prefix, random_id.id.hex))
+  export_custom_routes                = each.value.export_custom_routes
+  import_custom_routes                = each.value.import_custom_routes
   export_subnet_routes_with_public_ip = false
   import_subnet_routes_with_public_ip = false
 
@@ -171,6 +183,13 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_prod" {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks[each.value.key], "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
+
+    dynamic "advertised_ip_ranges" {
+      for_each = try(local._networks[each.value.key].summary_ip_ranges[each.value.region], [])
+      content {
+        range = advertised_ip_ranges.value
+      }
+    }
   }
 
   depends_on = [

@@ -47,7 +47,11 @@ locals {
   _access_trusted-to-shared_aa00_nonprod-map = {
     for x in setproduct(values(local.access_trusted-to-shared_aa00_nonprod.networks), local.access_trusted-to-shared_aa00_nonprod.regions) :
     join("-", [x[0], x[1]]) => {
-      asn      = local._networks[x[0]].asn
+      asn = try(
+        local._networks[x[0]].regional_asn[x[1]],
+        local._networks[x[0]].shared_asn,
+        local._default_asn
+      )
       key      = x[0]
       is_local = local.access_trusted-to-shared_aa00_nonprod.networks.local == x[0]
       name = format("vpn-%s-%s-%s-%s",
@@ -84,8 +88,16 @@ locals {
         ), v.region, idx)
         peer_asn = (
           v.is_local
-          ? local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.remote].asn
-          : local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.local].asn
+          ? try(
+            local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.remote].regional_asn[v.region],
+            local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.remote].shared_asn,
+            local._default_asn
+          )
+          : try(
+            local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.local].regional_asn[v.region],
+            local._networks[local.access_trusted-to-shared_aa00_nonprod.networks.local].shared_asn,
+            local._default_asn
+          )
         )
         self_name = v.name
         peer_name = (
@@ -172,6 +184,13 @@ resource "google_compute_router" "access_trusted-to-shared_aa00_nonprod" {
     asn               = each.value.asn
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks[each.value.key], "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
+
+    dynamic "advertised_ip_ranges" {
+      for_each = try(local._networks[each.value.key].summary_ip_ranges[each.value.region], [])
+      content {
+        range = advertised_ip_ranges.value
+      }
+    }
   }
 
   depends_on = [

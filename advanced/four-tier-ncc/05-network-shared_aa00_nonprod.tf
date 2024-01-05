@@ -134,7 +134,8 @@ resource "google_compute_router" "shared_aa00_nonprod" {
 
   region = each.key
   bgp {
-    asn               = local._networks.shared_aa00_nonprod.asn
+    # asn               = local._networks.shared_aa00_nonprod.asn
+    asn               = try(local._networks["shared_aa00_nonprod"].regional_asn[each.key], local._networks["shared_aa00_nonprod"].shared_asn, local._default_asn)
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks.shared_aa00_nonprod, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 

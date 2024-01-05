@@ -134,7 +134,8 @@ resource "google_compute_router" "shared_aa00_prod" {
 
   region = each.key
   bgp {
-    asn               = local._networks.shared_aa00_prod.asn
+    # asn               = local._networks.shared_aa00_prod.asn
+    asn               = try(local._networks["shared_aa00_prod"].regional_asn[each.key], local._networks["shared_aa00_prod"].shared_asn, local._default_asn)
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local._networks.shared_aa00_prod, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
@@ -182,8 +183,8 @@ resource "google_compute_global_address" "shared_aa00_prod" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection
 resource "google_service_networking_connection" "shared_aa00_prod" {
-  count                   = length(google_compute_global_address.shared_aa00_prod) != 0 ? 1 : 0
-  
+  count = length(google_compute_global_address.shared_aa00_prod) != 0 ? 1 : 0
+
   network                 = google_compute_network.shared_aa00_prod.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = values(google_compute_global_address.shared_aa00_prod).*.name

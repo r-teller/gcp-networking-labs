@@ -5,7 +5,14 @@ resource "random_id" "core_wan-to-distro_lan-seed" {
 
 locals {
   core_wan-to-distro_lan-vyos = {
-    asn          = 65534
+    ## if regional ASN exists it will be preferred over the shared ASN
+    shared_asn = 65534
+    regional_asn = {
+      us-east4 : 4204100000,
+      us-west1 : 4214100000,
+      asia-southeast1 : 4224100000,
+      europe-west3 : 4234100000,
+    }
     prefix       = "core-wan-to-distro-lan"
     machine_type = "n2d-standard-2"
     zones = {
@@ -52,6 +59,7 @@ locals {
       bucket_object = format("core_wan-to-distro_lan-vyos-%s.conf", local._regions[v1.region])
 
       subnetworks = { for k2, v2 in local.core_wan-to-distro_lan-vyos.interfaces : format("%s-%s", k1, k2) => {
+        nic = format("eth%d", k2)
         cidr_range = [
           for subnetwork in local._networks[v2.network].subnetworks :
           subnetwork.ip_cidr_range if(
@@ -59,6 +67,7 @@ locals {
             contains(subnetwork.tags, v2.subnetwork_tag)
           )
         ][0]
+
         network_prefix = local._networks[v2.network].prefix
         region         = v1.region
         ncc_spoke = format("%s-vyos-%s",
@@ -82,6 +91,31 @@ locals {
         }
       }
     })
+  }
+
+  core_wan-to-distro_lan-vyos-bootstrap = { for k1, v1 in local.core_wan-to-distro_lan-vyos-map : k1 => {
+    name = v1.name
+    local_asn = try(
+      local.core_wan-to-distro_lan-vyos.regional_asn[v1.region],
+      local.core_wan-to-distro_lan-vyos.shared_asn,
+      local._default_asn,
+    )
+
+    interfaces = { for k2, v2 in v1.subnetworks : k2 => {
+      network_prefix = v2.network_prefix
+      nic            = v2.nic
+      peer_addresses = [
+        cidrhost(v2.cidr_range, -3),
+        cidrhost(v2.cidr_range, -4)
+      ]
+      peer_asn = try(
+        local._networks[v2.network].regional_asn[v1.region],
+        local._networks[v2.network].shared_asn,
+        local._default_asn
+      )
+      }
+    }
+    }
   }
 }
 
@@ -114,11 +148,45 @@ resource "google_compute_address" "core_wan-to-distro_lan-vyos" {
   ]
 }
 
+resource "local_file" "core_wan-to-distro_lan-vyos" {
+  for_each = local.core_wan-to-distro_lan-vyos-bootstrap
+  filename = "./config/${each.value.name}/config.boot"
+  content = templatefile("${path.module}/template/${local.core_wan-to-distro_lan-vyos.prefix}/config.boot.tmpl",
+    {
+      "interfaces" : each.value.interfaces,
+      "asn" : each.value.local_asn,
+      "neighbors" : flatten([
+        for v1 in each.value.interfaces : [
+          for k2 in v1.peer_addresses : {
+            asn     = v1.peer_asn,
+            address = k2,
+            network_tag = upper(v1.network_prefix)
+          }
+        ]
+      ])
+    }
+  )
+}
+
 resource "google_storage_bucket_object" "core_wan-to-distro_lan-vyos" {
-  for_each = toset(distinct(values(local.core_wan-to-distro_lan-vyos-map).*.bucket_object))
-  name     = each.key
+  for_each = local.core_wan-to-distro_lan-vyos-bootstrap
+  name     = format("%s.conf", each.value.name)
   bucket   = google_storage_bucket.bucket.name
-  content  = "."
+  content = templatefile("${path.module}/template/${local.core_wan-to-distro_lan-vyos.prefix}/config.boot.tmpl",
+    {
+      "interfaces" : each.value.interfaces,
+      "asn" : each.value.local_asn,
+      "neighbors" : flatten([
+        for v1 in each.value.interfaces : [
+          for k2 in v1.peer_addresses : {
+            asn     = v1.peer_asn,
+            address = k2,
+            network_tag = upper(v1.network_prefix)
+          }
+        ]
+      ])
+    }
+  )
 
   lifecycle {
     ignore_changes = [detect_md5hash]
@@ -265,7 +333,12 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer0" {
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 0), random_id.id.hex)
 
-  peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
+  peer_asn = try(
+    local.core_wan-to-distro_lan-vyos.regional_asn[each.value.region],
+    local.core_wan-to-distro_lan-vyos.shared_asn,
+    local._default_asn,
+  )
+
   router_appliance_instance = google_compute_instance.core_wan-to-distro_lan-vyos[regex("^(.*)-.", each.key)[0]].self_link
   peer_ip_address           = google_compute_address.core_wan-to-distro_lan-vyos[each.key].address
   advertised_route_priority = 100
@@ -287,7 +360,11 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer1" {
   region    = each.value.region
   interface = format("%s-%s-%s", local._networks[each.value.network].prefix, format("nic%02d", 1), random_id.id.hex)
 
-  peer_asn                  = local.core_wan-to-distro_lan-vyos.asn
+  peer_asn = try(
+    local.core_wan-to-distro_lan-vyos.regional_asn[each.value.region],
+    local.core_wan-to-distro_lan-vyos.shared_asn,
+    local._default_asn,
+  )
   router_appliance_instance = google_compute_instance.core_wan-to-distro_lan-vyos[regex("^(.*)-.", each.key)[0]].self_link
   peer_ip_address           = google_compute_address.core_wan-to-distro_lan-vyos[each.key].address
   advertised_route_priority = 100
@@ -299,521 +376,3 @@ resource "google_compute_router_peer" "core_wan-to-distro_lan-vyos-peer1" {
     google_network_connectivity_spoke.core_wan-to-distro_lan-vyos,
   ]
 }
-
-
-
-# resource "google_compute_instance" "distro_lan_to_access_truested_vyos_usc1" {
-#   count   = 2
-#   project = var.project_id
-
-#   name = format("distro-lan-to-access-trusted-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
-
-#   zone = "us-central1-b"
-
-#   boot_disk {
-#     auto_delete = true
-#     device_name = "instance-1"
-
-#     initialize_params {
-#       image = "projects/rteller-demo-host-aaaa/global/images/vyos-advanced-v1-3-5"
-#       size  = 10
-#       type  = "pd-standard"
-#     }
-
-#     mode = "READ_WRITE"
-#   }
-
-#   can_ip_forward      = true
-#   deletion_protection = false
-#   enable_display      = false
-
-#   machine_type = "n2d-standard-4"
-
-#   metadata = {
-#     serial-port-enable      = "TRUE"
-#     pubsub-subscription     = format("distro-lan-to-access-trusted-vyos-%s-%02d-%s", "usc1", count.index, random_id.id.hex)
-#     configuration_bucket_id = google_storage_bucket_object.distro_lan_to_access_truested_vyos_usc1.bucket
-#     configuration_object_id = google_storage_bucket_object.distro_lan_to_access_truested_vyos_usc1.name
-#   }
-
-
-#   network_interface {
-#     subnetwork = google_compute_subnetwork.distro_lan[
-#       [for x in local._networks.distro_lan.subnetworks : x.ip_cidr_range if contains(try(x.tags, []), "network_appliance") && x.region == "us-central1"][0]
-#     ].self_link
-#   }
-
-#   network_interface {
-#     subnetwork = google_compute_subnetwork.access_trusted_aa00[
-#       [for x in local._networks.access_trusted_aa00.subnetworks : x.ip_cidr_range if contains(try(x.tags, []), "network_appliance") && x.region == "us-central1"][0]
-#     ].self_link
-#   }
-
-#   scheduling {
-#     automatic_restart   = true
-#     on_host_maintenance = "MIGRATE"
-#     preemptible         = false
-#     provisioning_model  = "STANDARD"
-#   }
-
-#   service_account {
-#     email  = google_service_account.vyos_compute_sa.email
-#     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-#   }
-
-#   lifecycle {
-#     ignore_changes = [metadata["ssh-keys"]]
-#   }
-# }
-
-# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_spoke
-# resource "google_network_connectivity_spoke" "core_wan_appliance_usc1" {
-#   project = var.project_id
-
-#   name = format("%s-%s-%s-%s",
-#     local._network_core_wan.prefix,
-#     "appliance",
-#     local._regions["us-central1"],
-#   random_id.id.hex, )
-
-#   location = "us-central1"
-
-#   hub = google_network_connectivity_hub.core_wan.id
-
-#   linked_router_appliance_instances {
-#     site_to_site_data_transfer = true
-#     dynamic "instances" {
-#       for_each = google_compute_instance.core_wan_to_distro_lan_vyos_usc1
-#       content {
-#         virtual_machine = instances.value.self_link
-#         ip_address      = instances.value.network_interface[0].network_ip
-#       }
-#     }
-#   }
-# }
-
-# resource "google_network_connectivity_spoke" "distro_lan_appliance_northbound_usc1" {
-#   project = var.project_id
-
-#   name = format("%s-%s-%s-%s",
-#     local._network_distro_lan.prefix,
-#     "appliance-northbound",
-#     local._regions["us-central1"],
-#   random_id.id.hex, )
-
-#   location = "us-central1"
-
-#   hub = google_network_connectivity_hub.distro_lan.id
-
-#   linked_router_appliance_instances {
-#     site_to_site_data_transfer = true
-#     dynamic "instances" {
-#       for_each = google_compute_instance.core_wan_to_distro_lan_vyos_usc1
-#       content {
-#         virtual_machine = instances.value.self_link
-#         ip_address      = instances.value.network_interface[1].network_ip
-#       }
-#     }
-#   }
-# }
-
-# resource "google_network_connectivity_spoke" "distro_lan_appliance_southbound_usc1" {
-#   project = var.project_id
-
-#   name = format("%s-%s-%s-%s",
-#     local._network_distro_lan.prefix,
-#     "appliance-southbound",
-#     local._regions["us-central1"],
-#   random_id.id.hex, )
-
-#   location = "us-central1"
-
-#   hub = google_network_connectivity_hub.distro_lan.id
-
-#   linked_router_appliance_instances {
-#     site_to_site_data_transfer = true
-#     dynamic "instances" {
-#       for_each = google_compute_instance.distro_lan_to_access_truested_vyos_usc1
-#       content {
-#         virtual_machine = instances.value.self_link
-#         ip_address      = instances.value.network_interface[0].network_ip
-#       }
-#     }
-#   }
-# }
-
-# resource "google_network_connectivity_spoke" "access_trusted_aa00_appliance_usc1" {
-#   project = var.project_id
-
-#   name = format("%s-%s-%s-%s",
-#     local._network_access_trusted_aa00.prefix,
-#     "appliance",
-#     local._regions["us-central1"],
-#   random_id.id.hex, )
-#   location = "us-central1"
-
-#   hub = google_network_connectivity_hub.access_trusted_aa00.id
-
-#   linked_router_appliance_instances {
-#     site_to_site_data_transfer = true
-#     dynamic "instances" {
-#       for_each = google_compute_instance.distro_lan_to_access_truested_vyos_usc1
-#       content {
-#         virtual_machine = instances.value.self_link
-#         ip_address      = instances.value.network_interface[1].network_ip
-#       }
-#     }
-#   }
-# }
-
-# # resource "google_network_connectivity_spoke" "access_trusted_0001_appliance_usc1" {
-# #   project = var.project_id
-
-# #   name = format("%s-%s-%s-%s",
-# #     local._network_access_trusted_0001.prefix,
-# #     "appliance",
-# #     local._regions["us-central1"],
-# #   random_id.id.hex, )
-# #   location = "us-central1"
-
-# #   hub = google_network_connectivity_hub.access_trusted_0001.id
-
-# #   linked_router_appliance_instances {
-# #     site_to_site_data_transfer = true
-# #     dynamic "instances" {
-# #       for_each = google_compute_instance.distro_lan_to_access_truested_vyos_usc1
-# #       content {
-# #         virtual_machine = instances.value.self_link
-# #         ip_address      = instances.value.network_interface[2].network_ip
-# #       }
-# #     }
-# #   }
-# # }
-
-# # resource "google_network_connectivity_spoke" "access_trusted_0002_appliance_usc1" {
-# #   project = var.project_id
-
-# #   name = format("%s-%s-%s-%s",
-# #     local._network_access_trusted_0002.prefix,
-# #     "appliance",
-# #     local._regions["us-central1"],
-# #   random_id.id.hex, )
-# #   location = "us-central1"
-
-# #   hub = google_network_connectivity_hub.access_trusted_0002.id
-
-# #   linked_router_appliance_instances {
-# #     site_to_site_data_transfer = true
-# #     dynamic "instances" {
-# #       for_each = google_compute_instance.distro_lan_to_access_truested_vyos_usc1
-# #       content {
-# #         virtual_machine = instances.value.self_link
-# #         ip_address      = instances.value.network_interface[3].network_ip
-# #       }
-# #     }
-# #   }
-# # }
-
-# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
-# resource "google_compute_router_peer" "core_wan_usc1_nic0" {
-#   for_each = { for idx, instance in google_compute_instance.core_wan_to_distro_lan_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic0")
-#   router    = google_compute_router.core_wan["us-central1"].name
-#   region    = google_compute_router.core_wan["us-central1"].region
-#   interface = google_compute_router_interface.core_wan-appliance-nic0["us-central1"].name
-
-#   peer_asn                  = 65534
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[0].network_ip
-#   advertised_route_priority = 100 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.core_wan_appliance_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "core_wan_usc1_nic1" {
-#   for_each = { for idx, instance in google_compute_instance.core_wan_to_distro_lan_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic1")
-#   router    = google_compute_router.core_wan["us-central1"].name
-#   region    = google_compute_router.core_wan["us-central1"].region
-#   interface = google_compute_router_interface.core_wan-appliance-nic1["us-central1"].name
-
-
-
-#   peer_asn                  = 65534
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[0].network_ip
-#   advertised_route_priority = 200 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.core_wan_appliance_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "distro_lan_appliance_northbound_usc1_nic0" {
-#   for_each = { for idx, instance in google_compute_instance.core_wan_to_distro_lan_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic0")
-#   router    = google_compute_router.distro_lan["us-central1"].name
-#   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan-appliance-nic0["us-central1"].name
-
-#   peer_asn                  = 65534
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[1].network_ip
-#   advertised_route_priority = 100 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.distro_lan_appliance_northbound_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "distro_lan_appliance_northbound_usc1_nic1" {
-#   for_each = { for idx, instance in google_compute_instance.core_wan_to_distro_lan_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic1")
-#   router    = google_compute_router.distro_lan["us-central1"].name
-#   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan-appliance-nic1["us-central1"].name
-
-#   peer_asn                  = 65534
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[1].network_ip
-#   advertised_route_priority = 200 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.distro_lan_appliance_northbound_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "distro_lan_appliance_southbound_usc1_nic0" {
-#   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic0")
-#   router    = google_compute_router.distro_lan["us-central1"].name
-#   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan-appliance-nic0["us-central1"].name
-
-#   peer_asn                  = 65533
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[0].network_ip
-#   advertised_route_priority = 100 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.distro_lan_appliance_southbound_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "distro_lan_appliance_southbound_usc1_nic1" {
-#   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic1")
-#   router    = google_compute_router.distro_lan["us-central1"].name
-#   region    = google_compute_router.distro_lan["us-central1"].region
-#   interface = google_compute_router_interface.distro_lan-appliance-nic1["us-central1"].name
-
-#   peer_asn                  = 65533
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[0].network_ip
-#   advertised_route_priority = 200 + each.key
-
-
-#   depends_on = [
-#     google_network_connectivity_spoke.distro_lan_appliance_southbound_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "access_trusted_aa00_appliance_usc1_nic0" {
-#   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic0")
-#   router    = google_compute_router.access_trusted_aa00["us-central1"].name
-#   region    = google_compute_router.access_trusted_aa00["us-central1"].region
-#   interface = google_compute_router_interface.access_trusted_aa00-appliance-nic0["us-central1"].name
-
-#   peer_asn                  = 65533
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[1].network_ip
-#   advertised_route_priority = 100 + each.key
-
-#   depends_on = [
-#     google_network_connectivity_spoke.access_trusted_aa00_appliance_usc1
-#   ]
-# }
-
-# resource "google_compute_router_peer" "access_trusted_aa00_appliance_usc1_nic1" {
-#   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-#   project = var.project_id
-
-#   name      = format("%s-%s", each.value.name, "nic1")
-#   router    = google_compute_router.access_trusted_aa00["us-central1"].name
-#   region    = google_compute_router.access_trusted_aa00["us-central1"].region
-#   interface = google_compute_router_interface.access_trusted_aa00-appliance-nic1["us-central1"].name
-
-#   peer_asn                  = 65533
-#   router_appliance_instance = each.value.self_link
-#   peer_ip_address           = each.value.network_interface[1].network_ip
-#   advertised_route_priority = 200 + each.key
-
-
-#   depends_on = [
-#     google_network_connectivity_spoke.access_trusted_aa00_appliance_usc1
-#   ]
-# }
-
-# # resource "google_compute_router_peer" "access_trusted_0001_appliance_usc1_nic0" {
-# #   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-# #   project = var.project_id
-
-# #   name      = format("%s-%s", each.value.name, "nic0")
-# #   router    = google_compute_router.access_trusted_0001["us-central1"].name
-# #   region    = google_compute_router.access_trusted_0001["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0001-appliance-nic0["us-central1"].name
-
-# #   peer_asn                  = 65533
-# #   router_appliance_instance = each.value.self_link
-# #   peer_ip_address           = each.value.network_interface[2].network_ip
-# #   advertised_route_priority = 100 + each.key
-
-# #   depends_on = [
-# #     google_network_connectivity_spoke.access_trusted_0001_appliance_usc1
-# #   ]
-# # }
-
-# # resource "google_compute_router_peer" "access_trusted_0001_appliance_usc1_nic1" {
-# #   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-# #   project = var.project_id
-
-# #   name      = format("%s-%s", each.value.name, "nic1")
-# #   router    = google_compute_router.access_trusted_0001["us-central1"].name
-# #   region    = google_compute_router.access_trusted_0001["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0001-appliance-nic1["us-central1"].name
-
-# #   peer_asn                  = 65533
-# #   router_appliance_instance = each.value.self_link
-# #   peer_ip_address           = each.value.network_interface[2].network_ip
-# #   advertised_route_priority = 200 + each.key
-
-
-# #   depends_on = [
-# #     google_network_connectivity_spoke.access_trusted_0001_appliance_usc1
-# #   ]
-# # }
-
-# # resource "google_compute_router_peer" "access_trusted_0002_appliance_usc1_nic0" {
-# #   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-# #   project = var.project_id
-
-# #   name      = format("%s-%s", each.value.name, "nic0")
-# #   router    = google_compute_router.access_trusted_0002["us-central1"].name
-# #   region    = google_compute_router.access_trusted_0002["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0002-appliance-nic0["us-central1"].name
-
-# #   peer_asn                  = 65533
-# #   router_appliance_instance = each.value.self_link
-# #   peer_ip_address           = each.value.network_interface[3].network_ip
-# #   advertised_route_priority = 100 + each.key
-
-# #   depends_on = [
-# #     google_network_connectivity_spoke.access_trusted_0002_appliance_usc1
-# #   ]
-# # }
-
-# # resource "google_compute_router_peer" "access_trusted_0002_appliance_usc1_nic1" {
-# #   for_each = { for idx, instance in google_compute_instance.distro_lan_to_access_truested_vyos_usc1 : idx => instance }
-
-# #   project = var.project_id
-
-# #   name      = format("%s-%s", each.value.name, "nic1")
-# #   router    = google_compute_router.access_trusted_0002["us-central1"].name
-# #   region    = google_compute_router.access_trusted_0002["us-central1"].region
-# #   interface = google_compute_router_interface.access_trusted_0002-appliance-nic1["us-central1"].name
-
-# #   peer_asn                  = 65533
-# #   router_appliance_instance = each.value.self_link
-# #   peer_ip_address           = each.value.network_interface[3].network_ip
-# #   advertised_route_priority = 200 + each.key
-
-
-# #   depends_on = [
-# #     google_network_connectivity_spoke.access_trusted_0002_appliance_usc1
-# #   ]
-# # }
-
-# resource "google_pubsub_subscription" "core_wan_to_distro_lan_vyos_usc1" {
-#   count = length(google_compute_instance.core_wan_to_distro_lan_vyos_usc1)
-
-#   project = var.project_id
-#   name    = google_compute_instance.core_wan_to_distro_lan_vyos_usc1[count.index].name
-#   topic   = google_pubsub_topic.configuration_update_topic.name
-
-#   filter = "attributes.objectId = \"core_wan_to_distro_lan_vyos_usc1.conf\""
-
-#   ack_deadline_seconds = 30
-# }
-
-# resource "google_pubsub_subscription_iam_policy" "core_wan_to_distro_lan_vyos_usc1" {
-#   count = length(google_pubsub_subscription.core_wan_to_distro_lan_vyos_usc1)
-
-#   project      = var.project_id
-#   subscription = google_pubsub_subscription.core_wan_to_distro_lan_vyos_usc1[count.index].name
-#   policy_data  = data.google_iam_policy.subscription_subscriber.policy_data
-# }
-
-# resource "google_pubsub_subscription" "distro_lan_to_access_truested_vyos_usc1" {
-#   count = length(google_compute_instance.distro_lan_to_access_truested_vyos_usc1)
-
-#   project = var.project_id
-#   name    = google_compute_instance.distro_lan_to_access_truested_vyos_usc1[count.index].name
-#   topic   = google_pubsub_topic.configuration_update_topic.name
-
-#   filter               = "attributes.objectId = \"distro_lan_to_access_truested_vyos_usc1.conf\""
-#   ack_deadline_seconds = 30
-# }
-
-# resource "google_pubsub_subscription_iam_policy" "distro_lan_to_access_truested_vyos_usc1" {
-#   count = length(google_pubsub_subscription.distro_lan_to_access_truested_vyos_usc1)
-
-#   project      = var.project_id
-#   subscription = google_pubsub_subscription.distro_lan_to_access_truested_vyos_usc1[count.index].name
-#   policy_data  = data.google_iam_policy.subscription_subscriber.policy_data
-# }
-
-# resource "google_storage_notification" "core_wan_to_distro_lan_vyos_usc1" {
-#   bucket             = google_storage_bucket.bucket.name
-#   payload_format     = "JSON_API_V1"
-#   topic              = google_pubsub_topic.configuration_update_topic.id
-#   event_types        = ["OBJECT_FINALIZE", "OBJECT_METADATA_UPDATE"]
-#   object_name_prefix = "core_wan_to_distro_lan_vyos_usc1"
-#   depends_on         = [google_pubsub_topic_iam_member.pubsub_notification_event]
-# }
-
-# resource "google_storage_notification" "distro_lan_to_access_truested_vyos_usc1" {
-#   bucket             = google_storage_bucket.bucket.name
-#   payload_format     = "JSON_API_V1"
-#   topic              = google_pubsub_topic.configuration_update_topic.id
-#   event_types        = ["OBJECT_FINALIZE", "OBJECT_METADATA_UPDATE"]
-#   object_name_prefix = "distro_lan_to_access_truested_vyos_usc1"
-#   depends_on         = [google_pubsub_topic_iam_member.pubsub_notification_event]
-# }
