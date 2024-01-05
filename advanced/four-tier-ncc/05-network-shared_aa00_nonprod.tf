@@ -140,7 +140,7 @@ resource "google_compute_router" "shared_aa00_nonprod" {
     advertised_groups = lookup(local._networks.shared_aa00_nonprod, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
-      for_each = local._networks.shared_aa00_nonprod.summary_ip_ranges[each.key]
+      for_each = try(local._networks.shared_aa00_nonprod.summary_ip_ranges[each.key], [])
       content {
         range = advertised_ip_ranges.value
       }
@@ -182,7 +182,7 @@ resource "google_compute_global_address" "shared_aa00_nonprod" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection
 resource "google_service_networking_connection" "shared_aa00_nonprod" {
-  count                   = length(google_compute_global_address.shared_aa00_nonprod) != 0 ? 1 : 0
+  count = length(google_compute_global_address.shared_aa00_nonprod) != 0 ? 1 : 0
 
   network                 = google_compute_network.shared_aa00_nonprod.id
   service                 = "servicenetworking.googleapis.com"

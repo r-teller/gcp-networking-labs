@@ -292,8 +292,8 @@ locals {
       }
       advertise_local_subnets = false
       summary_ip_ranges = {
-        "us-east4" : ["10.0.96.0/22"]
-        "us-west1" : ["10.32.96.0/22"]
+        # "us-east4" : ["10.0.96.0/22"]
+        # "us-west1" : ["10.32.96.0/22"]
       }
       subnetworks = [
         {
@@ -322,8 +322,8 @@ locals {
       }
       advertise_local_subnets = false
       summary_ip_ranges = {
-        "us-east4" : ["10.0.0.0/21"],
-        "us-west1" : ["10.32.0.0/21"],
+        # "us-east4" : ["10.0.0.0/21"],
+        # "us-west1" : ["10.32.0.0/21"],
       }
       private_service_ranges = [
         {

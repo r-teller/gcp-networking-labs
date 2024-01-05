@@ -140,7 +140,7 @@ resource "google_compute_router" "shared_aa00_prod" {
     advertised_groups = lookup(local._networks.shared_aa00_prod, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
 
     dynamic "advertised_ip_ranges" {
-      for_each = local._networks.shared_aa00_prod.summary_ip_ranges[each.key]
+      for_each = try(local._networks.shared_aa00_prod.summary_ip_ranges[each.key], [])
       content {
         range = advertised_ip_ranges.value
       }

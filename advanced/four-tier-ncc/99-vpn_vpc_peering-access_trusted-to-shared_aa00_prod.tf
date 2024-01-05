@@ -266,28 +266,28 @@ resource "google_compute_router_peer" "access_trusted-to-shared_aa00_prod" {
   ]
 }
 
-resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod" {
-  for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_prod : k => v if(
-    startswith(k, "access_trusted_transit") &&
-    length(merge(values(local.access_trusted-to-shared_aa00_prod-map).*.tunnels...)) > 0
-  ) }
+# resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod" {
+#   for_each = { for k, v in google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_prod : k => v if(
+#     startswith(k, "access_trusted_transit") &&
+#     length(merge(values(local.access_trusted-to-shared_aa00_prod-map).*.tunnels...)) > 0
+#   ) }
 
-  project = var.project_id
+#   project = var.project_id
 
-  name = each.value.name
+#   name = each.value.name
 
-  location = each.value.region
+#   location = each.value.region
 
-  hub = google_network_connectivity_hub.access_trusted_transit.id
+#   hub = google_network_connectivity_hub.access_trusted_transit.id
 
-  linked_vpn_tunnels {
-    site_to_site_data_transfer = true
-    uris                       = [for k, v in google_compute_vpn_tunnel.access_trusted-to-shared_aa00_prod : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.value.name)]
-  }
+#   linked_vpn_tunnels {
+#     site_to_site_data_transfer = false
+#     uris                       = [for k, v in google_compute_vpn_tunnel.access_trusted-to-shared_aa00_prod : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.value.name)]
+#   }
 
-  depends_on = [
-    null_resource.access_trusted-to-shared_aa00_prod,
-    google_compute_vpn_tunnel.access_trusted-to-shared_aa00_prod,
-  ]
-}
+#   depends_on = [
+#     null_resource.access_trusted-to-shared_aa00_prod,
+#     google_compute_vpn_tunnel.access_trusted-to-shared_aa00_prod,
+#   ]
+# }
 
