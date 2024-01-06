@@ -59,7 +59,7 @@ resource "google_compute_vpn_tunnel" "vpn_tunnels" {
 
   #   name                            = each.value.name
 
-  name = format("foo-vpn-%04d-%s-%s-%02d-%s",
+  name = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
       ? random_integer.tunnel_bits[each.value.self_key].result
@@ -92,7 +92,7 @@ resource "google_compute_router_interface" "router_interfaces" {
 
   project = var.project_id
 
-  name = format("foo-vpn-%04d-%s-%s-%02d-%s",
+  name = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
       ? random_integer.tunnel_bits[each.value.self_key].result
@@ -112,7 +112,7 @@ resource "google_compute_router_interface" "router_interfaces" {
     : format("%s/%d", cidrhost(cidrsubnet("169.254.0.0/16", 14, random_integer.tunnel_bits[each.value.peer_key].result), 2), 30)
   )
 
-  vpn_tunnel = format("foo-vpn-%04d-%s-%s-%02d-%s",
+  vpn_tunnel = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
       ? random_integer.tunnel_bits[each.value.self_key].result
@@ -130,7 +130,6 @@ resource "google_compute_router_interface" "router_interfaces" {
   ]
 }
 
-
 resource "google_compute_router_peer" "router_peers" {
   for_each = merge(values(local.map).*.tunnels...)
 
@@ -138,7 +137,7 @@ resource "google_compute_router_peer" "router_peers" {
 
   #   name                      = each.value.name
 
-  name = format("foo-vpn-%04d-%s-%s-%02d-%s",
+  name = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
       ? random_integer.tunnel_bits[each.value.self_key].result
@@ -161,8 +160,7 @@ resource "google_compute_router_peer" "router_peers" {
   )
 
   #   interface = each.value.name
-
-  interface = format("foo-vpn-%04d-%s-%s-%02d-%s",
+  interface = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
       ? random_integer.tunnel_bits[each.value.self_key].result
@@ -178,4 +176,23 @@ resource "google_compute_router_peer" "router_peers" {
     google_compute_router.routers,
     google_compute_router_interface.router_interfaces,
   ]
+}
+
+
+
+resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod" {
+  for_each = { for k, v in local.distinct_map : k => v if v.is_hub && var.ncc_hub != null }
+
+  project = var.project_id
+  name    = each.key
+
+  location = each.value.region
+
+  hub = var.ncc_hub
+
+  linked_vpn_tunnels {
+    site_to_site_data_transfer = true
+    uris = [
+    for k, v in google_compute_vpn_tunnel.vpn_tunnels : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.key)]
+  }
 }

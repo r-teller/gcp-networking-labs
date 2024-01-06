@@ -7,6 +7,11 @@ variable "default_asn" {
   default = 65534
 }
 
+variable "ncc_hub" {
+  type    = string
+  default = null
+}
+
 variable "config_map" {
   description = "Map of network configurations"
 

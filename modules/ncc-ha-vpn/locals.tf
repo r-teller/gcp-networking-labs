@@ -15,14 +15,13 @@ locals {
         map.regions,
       ),
       ) : join("-", [x[0], x[1], x[2]]) => {
-      name = format("foo-vpn-%s-%s-%s-%s",
+      name = format("vpn-%s-%s-%s-%s",
         random_id.seed.hex,
         var.config_map[x[0]].prefix,
         module.utils.region_short_name_map[x[2]],
         local.random_id.hex
       )
-
-
+      
       asn = try(
         var.config_map[x[0]].regional_asn[x[2]],
         var.config_map[x[0]].shared_asn,
@@ -58,7 +57,7 @@ locals {
     {
       tunnels : { for idx in range(v.tunnel_count) :
         format("%s-%02d", k, idx) => {
-          #   name = format("foo-vpn-%s-%s-%s-%02d-%s",
+          #   name = format("vpn-%s-%s-%s-%02d-%s",
           #     random_id.seed.hex,
           #     var.config_map[v.key].prefix,
           #     module.utils.region_short_name_map[v.region],
@@ -91,13 +90,13 @@ locals {
           self_name = v.name
           peer_name = (
             v.is_hub
-            ? format("foo-vpn-%s-%s-%s-%s",
+            ? format("vpn-%s-%s-%s-%s",
               random_id.seed.hex,
               var.config_map[v.networks.spoke].prefix,
               module.utils.region_short_name_map[v.region],
               local.random_id.hex
             )
-            : format("foo-vpn-%s-%s-%s-%s",
+            : format("vpn-%s-%s-%s-%s",
               random_id.seed.hex,
               var.config_map[v.networks.hub].prefix,
               module.utils.region_short_name_map[v.region],
@@ -118,6 +117,7 @@ locals {
     network = v.network
     key     = v.key
     asn     = v.asn
+    is_hub  = v.is_hub
   } }]...)
 }
 output "foo" {
@@ -147,7 +147,7 @@ output "foo" {
 #       is_spoke = var.input.networks.spoke == x[0]
 #       is_hub   = var.input.networks.hub == x[0]
 
-#       name = format("foo-vpn-%s-%s-%s-%s",
+#       name = format("vpn-%s-%s-%s-%s",
 #         random_id.seed.hex,
 #         var.config_map[x[0]].prefix,
 #         module.utils.region_short_name_map[x[1]],
@@ -162,7 +162,7 @@ output "foo" {
 #   map = { for k, v in local._map : k => merge(v, {
 #     tunnels : { for idx in range(var.input.tunnel_count) :
 #       format("%s-%02d", k, idx) => {
-#         name = format("foo-vpn-%s-%s-%s-%02d-%s",
+#         name = format("vpn-%s-%s-%s-%02d-%s",
 #           random_id.seed.hex,
 #           var.config_map[v.key].prefix,
 #           module.utils.region_short_name_map[v.region],
@@ -194,13 +194,13 @@ output "foo" {
 #         self_name = v.name
 #         peer_name = (
 #           v.is_hub
-#           ? format("foo-vpn-%s-%s-%s-%s",
+#           ? format("vpn-%s-%s-%s-%s",
 #             random_id.seed.hex,
 #             var.config_map[var.input.networks.spoke].prefix,
 #             module.utils.region_short_name_map[v.region],
 #             local.random_id.hex
 #           )
-#           : format("foo-vpn-%s-%s-%s-%s",
+#           : format("vpn-%s-%s-%s-%s",
 #             random_id.seed.hex,
 #             var.config_map[var.input.networks.hub].prefix,
 #             module.utils.region_short_name_map[v.region],
@@ -217,7 +217,7 @@ output "foo" {
 # {
 #   tunnels : { for idx in range(var.input.tunnel_count) :
 #     format("%s-%02d", k, idx) => {
-#       name = format("foo-vpn-%s-%s-%s-%02d-%s",
+#       name = format("vpn-%s-%s-%s-%02d-%s",
 #         random_id.seed.hex,
 #         var.config_map[v.key].prefix,
 #         module.utils.region_short_name_map[v.region],
@@ -249,13 +249,13 @@ output "foo" {
 #       self_name = v.name
 #       peer_name = (
 #         v.is_hub
-#         ? format("foo-vpn-%s-%s-%s-%s",
+#         ? format("vpn-%s-%s-%s-%s",
 #           random_id.seed.hex,
 #           var.config_map[var.input.networks.spoke].prefix,
 #           module.utils.region_short_name_map[v.region],
 #           local.random_id.hex
 #         )
-#         : format("foo-vpn-%s-%s-%s-%s",
+#         : format("vpn-%s-%s-%s-%s",
 #           random_id.seed.hex,
 #           var.config_map[var.input.networks.hub].prefix,
 #           module.utils.region_short_name_map[v.region],
