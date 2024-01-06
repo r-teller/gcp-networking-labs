@@ -18,6 +18,7 @@ resource "null_resource" "access_trusted-to-shared_aa00_nonprod" {
   ]
 }
 
+
 locals {
   access_trusted-to-shared_aa00_nonprod = {
     regions = ["us-east4", "us-west1"]
@@ -123,6 +124,7 @@ locals {
   }
 }
 
+
 ## Used to workaround multiple VPC Peering update issue
 ## => https://github.com/hashicorp/terraform-provider-google/issues/3034
 resource "time_sleep" "access_trusted-to-shared_aa00_nonprod" {
@@ -170,17 +172,17 @@ resource "google_compute_ha_vpn_gateway" "access_trusted-to-shared_aa00_nonprod"
   ]
 }
 
-data "google_compute_ha_vpn_gateway" "gateway" {
-  name    = google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"].name
-  project = var.project_id
-  region  = google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"].region
-}
-# google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["core_wan-us-east4"]
-# google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"]
+# data "google_compute_ha_vpn_gateway" "gateway" {
+#   name    = google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"].name
+#   project = var.project_id
+#   region  = google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"].region
+# }
+# # google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["core_wan-us-east4"]
+# # google_compute_ha_vpn_gateway.access_trusted-to-shared_aa00_nonprod["shared_aa00_nonprod-us-east4"]
 
-output "gateway" {
-  value = data.google_compute_ha_vpn_gateway.gateway
-}
+# output "gateway" {
+#   value = data.google_compute_ha_vpn_gateway.gateway
+# }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router
 resource "google_compute_router" "access_trusted-to-shared_aa00_nonprod" {
