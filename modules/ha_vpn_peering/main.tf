@@ -1,7 +1,3 @@
-module "utils" {
-  source = "terraform-google-modules/utils/google"
-}
-
 resource "random_id" "seed" {
   byte_length = 2
 }
@@ -22,7 +18,7 @@ resource "google_compute_ha_vpn_gateway" "ha_vpn_gateways" {
   for_each = local.distinct_map
 
   provider = google-beta
-  name     = each.key
+  name     = each.value.name
   project  = var.project_id
   region   = each.value.region
   network  = each.value.network
@@ -34,7 +30,7 @@ resource "google_compute_router" "routers" {
 
   project = var.project_id
 
-  name    = each.key
+  name    = each.value.name
   network = each.value.network
 
   region = each.value.region
@@ -56,8 +52,6 @@ resource "google_compute_vpn_tunnel" "vpn_tunnels" {
   for_each = merge(values(local.map).*.tunnels...)
 
   project = var.project_id
-
-  #   name                            = each.value.name
 
   name = format("vpn-%04d-%s-%s-%02d-%s",
     (
@@ -135,8 +129,6 @@ resource "google_compute_router_peer" "router_peers" {
 
   project = var.project_id
 
-  #   name                      = each.value.name
-
   name = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
@@ -159,7 +151,6 @@ resource "google_compute_router_peer" "router_peers" {
     : cidrhost(cidrsubnet("169.254.0.0/16", 14, random_integer.tunnel_bits[each.value.peer_key].result), 1)
   )
 
-  #   interface = each.value.name
   interface = format("vpn-%04d-%s-%s-%02d-%s",
     (
       each.value.is_hub
@@ -178,21 +169,31 @@ resource "google_compute_router_peer" "router_peers" {
   ]
 }
 
+locals {
+  vpn_gateway_list = values(google_compute_vpn_tunnel.vpn_tunnels).*.vpn_gateway
+}
 
-
-resource "google_network_connectivity_spoke" "access_trusted-to-shared_aa00_prod" {
-  for_each = { for k, v in local.distinct_map : k => v if v.is_hub && var.ncc_hub != null }
+resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
+  for_each = { for k, v in local.distinct_map : k => v if(
+    v.is_hub &&
+    var.ncc_hub != null &&
+    can(index(values(google_compute_vpn_tunnel.vpn_tunnels).*.region, v.region))
+  ) }
 
   project = var.project_id
-  name    = each.key
+  name    = each.value.name
 
   location = each.value.region
 
-  hub = var.ncc_hub
+  hub = var.ncc_hub.id
 
   linked_vpn_tunnels {
     site_to_site_data_transfer = true
     uris = [
-    for k, v in google_compute_vpn_tunnel.vpn_tunnels : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.key)]
+    for k, v in google_compute_vpn_tunnel.vpn_tunnels : v.self_link if v.region == each.value.region && endswith(v.vpn_gateway, each.value.name)]
   }
+
+  depends_on = [
+    google_compute_vpn_tunnel.vpn_tunnels
+  ]
 }

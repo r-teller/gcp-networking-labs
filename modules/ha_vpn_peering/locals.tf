@@ -21,7 +21,7 @@ locals {
         module.utils.region_short_name_map[x[2]],
         local.random_id.hex
       )
-      
+
       asn = try(
         var.config_map[x[0]].regional_asn[x[2]],
         var.config_map[x[0]].shared_asn,
@@ -112,7 +112,8 @@ locals {
     )
   }
 
-  distinct_map = merge([for v in local.map : { (v.name) = {
+  distinct_map = merge([for v in local.map : { format("%s-%s", v.key, v.region) = {
+    name    = v.name
     region  = v.region,
     network = v.network
     key     = v.key

@@ -2,15 +2,6 @@ variable "project_id" {
   type = string
 }
 
-variable "default_asn" {
-  type    = number
-  default = 65534
-}
-
-variable "ncc_hub" {
-  type    = string
-  default = null
-}
 
 variable "config_map" {
   description = "Map of network configurations"
@@ -41,11 +32,7 @@ variable "random_id" {
 variable "input_list" {
   type = list(
     object({
-      regions = list(string),
-      networks = object({
-        hub   = string,
-        spoke = string,
-      }),
-      tunnel_count = number,
+      hub   = string,
+      spoke = string,
   }))
 }
