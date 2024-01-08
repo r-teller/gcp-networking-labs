@@ -292,9 +292,15 @@ locals {
       }
       advertise_local_subnets = false
       summary_ip_ranges = {
-        # "us-east4" : ["10.0.96.0/22"]
+        "us-east4" : ["10.0.96.0/22"]
         # "us-west1" : ["10.32.96.0/22"]
       }
+      private_service_ranges = [
+        {
+          region        = "us-east4",
+          ip_cidr_range = "10.0.99.0/24"
+        },
+      ]
       subnetworks = [
         {
           region = "us-east4",

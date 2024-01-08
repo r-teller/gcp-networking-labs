@@ -86,7 +86,7 @@ resource "google_compute_route" "access_trusted_ab00-iap" {
   name             = format("%s-%s-iap", local._networks.access_trusted_ab00.prefix, random_id.id.hex)
   network          = google_compute_network.access_trusted_ab00.self_link
   dest_range       = "35.235.240.0/20"
-  next_hop_gateway = "https://www.googleapis.com/compute/v1/projects/rteller-demo-host-aaaa/global/gateways/default-internet-gateway"
+  next_hop_gateway = "default-internet-gateway"
 }
 
 resource "google_compute_route" "access_trusted_ab00-private" {
@@ -95,7 +95,7 @@ resource "google_compute_route" "access_trusted_ab00-private" {
   name             = format("%s-%s-private", local._networks.access_trusted_ab00.prefix, random_id.id.hex)
   network          = google_compute_network.access_trusted_ab00.self_link
   dest_range       = "199.36.153.8/30"
-  next_hop_gateway = "https://www.googleapis.com/compute/v1/projects/rteller-demo-host-aaaa/global/gateways/default-internet-gateway"
+  next_hop_gateway = "default-internet-gateway"
 }
 
 resource "google_compute_route" "access_trusted_ab00-default" {
@@ -105,7 +105,7 @@ resource "google_compute_route" "access_trusted_ab00-default" {
   network          = google_compute_network.access_trusted_ab00.self_link
   tags             = [format("%s-%s-default", local._networks.access_trusted_ab00.prefix, random_id.id.hex)]
   dest_range       = "0.0.0.0/0"
-  next_hop_gateway = "https://www.googleapis.com/compute/v1/projects/rteller-demo-host-aaaa/global/gateways/default-internet-gateway"
+  next_hop_gateway = "default-internet-gateway"
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork

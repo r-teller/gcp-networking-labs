@@ -21,9 +21,21 @@
 | Cloud Composer | - 172.17.0.0/16                      | The 172.17.0.0/16 range is reserved in Cloud SQL. |
 
 # Services that **DO** support Private Service Connections
+You can access the following services by using Private Service Connect.
+https://cloud.google.com/vpc/docs/private-service-connect-compatibility#google-services
+- **Apigee** --> https://cloud.google.com/apigee/docs/api-platform/get-started/networking-options
+- **Cloud SQL (Postgres)**--> https://cloud.google.com/sql/docs/postgres/about-private-service-connect
+- **Cloud SQL (MySql)**--> https://cloud.google.com/sql/docs/mysql/about-private-service-connect
 - **Cloud Composer V2** --> https://cloud.google.com/composer/docs/composer-2/configure-private-service-connect
+- **Memorystore Redis Cluster** --> https://cloud.google.com/memorystore/docs/cluster/networking
 
 
 # Services that **DO NOT** support Private Service Connections
+- **Cloud SQL (SQL Server)** --> https://cloud.google.com/sql/docs/sqlserver/configure-private-services-access
+- **Alloy DB** --> https://cloud.google.com/alloydb/docs/configure-connectivity
 - **Cloud Composer V1**
-- **Memorystore Redis** --> https://cloud.google.com/memorystore/docs/redis/networking
+- **Memorystore Redis** --> https://cloud.google.com/memorystore/docs/redis/establish-connection
+- **Memorystore Memcached** --> https://cloud.google.com/memorystore/docs/memcached/establish-connection
+- **Cloud Build** --> https://cloud.google.com/build/docs/private-pools/use-in-private-network#peered-vpc
+- **Vertex AI** --> https://cloud.google.com/vertex-ai/docs/general/vpc-peering
+- **Filestore** --> https://cloud.google.com/filestore/docs/network-ip-requirements
