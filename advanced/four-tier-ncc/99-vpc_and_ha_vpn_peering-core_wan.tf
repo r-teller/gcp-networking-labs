@@ -1,8 +1,7 @@
 resource "null_resource" "vpc_and_ha_vpn_peering-core_wan" {
   depends_on = [
-    google_compute_network.core_wan,
-    google_compute_network.on_prem_wan,
-    google_network_connectivity_hub.core_wan,
+    module.network-core_wan,
+    module.network-on_prem_wan,
   ]
 }
 
@@ -10,7 +9,7 @@ module "ha_vpn_peering-core_wan" {
   source     = "../../modules/ha_vpn_peering"
   config_map = local._networks
   project_id = var.project_id
-  ncc_hub    = google_network_connectivity_hub.core_wan
+  ncc_hub    = module.network-core_wan.ncc_hub
   input_list = [
     {
       regions = ["us-east4"]

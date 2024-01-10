@@ -1,5 +1,6 @@
 resource "null_resource" "vpc_and_ha_vpn_peering-access_trusted" {
   depends_on = [
+    module.network-access_trusted_transit,
     module.network-access_trusted_aa00,
     module.network-access_trusted_ab00,
   ]
@@ -33,7 +34,7 @@ module "ha_vpn_peering-access_trusted" {
   source     = "../../modules/ha_vpn_peering"
   config_map = local._networks
   project_id = var.project_id
-  ncc_hub    = google_network_connectivity_hub.access_trusted_transit
+  ncc_hub    = module.network-access_trusted_transit.ncc_hub
   input_list = [
     {
       regions = ["us-east4"]
