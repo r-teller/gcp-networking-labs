@@ -51,12 +51,12 @@ locals {
           "192.168.0.0/16",
         ],
       }
-
+      cloud_nat_all_subnets = false
       subnetworks = [
         {
           region = "us-east4",
           ip_cidr_range : "192.168.0.0/24",
-          tags = ["network_appliance"],
+          tags = ["network_appliance", "cloud_nat"],
         },
         {
           region = "us-west1",

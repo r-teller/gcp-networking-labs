@@ -150,7 +150,7 @@ resource "google_compute_router" "shared_aa00_nonprod" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_nat
 resource "google_compute_router_nat" "shared_aa00_nonprod" {
-  for_each = toset(distinct(local._networks.shared_aa00_nonprod.subnetworks.*.region))
+  for_each = toset(distinct([for subnetwork in local._networks["shared_aa00_nonprod"].subnetworks : subnetwork.region if(try(local._networks["shared_aa00_nonprod"].cloud_nat_all_subnets, false) || try(contains(subnetwork.tags, "cloud_nat"),false))]))
 
   project = var.project_id
 

@@ -149,7 +149,7 @@ resource "google_compute_router" "access_trusted_ab00" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_nat
 resource "google_compute_router_nat" "access_trusted_ab00" {
-  for_each = toset(distinct(local._networks.access_trusted_ab00.subnetworks.*.region))
+  for_each = toset(distinct([for subnetwork in local._networks["access_trusted_ab00"].subnetworks : subnetwork.region if(try(local._networks["access_trusted_ab00"].cloud_nat_all_subnets, false) || try(contains(subnetwork.tags, "cloud_nat"),false))]))
 
   project = var.project_id
 

@@ -1,11 +1,7 @@
 resource "null_resource" "vpc_and_ha_vpn_peering-access_trusted" {
   depends_on = [
-    google_compute_network.access_trusted_aa00,
-    google_compute_network.access_trusted_ab00,
-    google_compute_network.access_trusted_transit,
-    google_compute_network.shared_aa00_prod,
-    google_compute_network.shared_aa00_nonprod,
-    google_network_connectivity_hub.access_trusted_transit,
+    module.network-access_trusted_aa00,
+    module.network-access_trusted_ab00,
   ]
 }
 

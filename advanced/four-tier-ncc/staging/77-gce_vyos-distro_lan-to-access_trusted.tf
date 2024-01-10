@@ -16,7 +16,7 @@ locals {
     prefix       = "distro-lan-to-access-trusted"
     machine_type = "n2d-standard-4"
     zones = {
-      "us-east4-a" = 1
+      "us-east4-a" = 2
       "us-west1-a" = 1
     }
     service_account = google_service_account.vyos_compute_sa.email
