@@ -7,10 +7,10 @@ variable "default_asn" {
   default = 65534
 }
 
-variable "ncc_hub" {
-  # type    = string
-  default = null
-}
+# variable "ncc_hub_id" {
+#   type    = string
+#   default = null
+# }
 
 variable "config_map" {
   description = "Map of network configurations"
@@ -47,5 +47,6 @@ variable "input_list" {
         spoke = string,
       }),
       tunnel_count = number,
+      use_ncc_hub = optional(bool,false)
   }))
 }

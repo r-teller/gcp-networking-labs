@@ -124,6 +124,7 @@ resource "google_compute_router_interface" "router_interfaces" {
   ]
 }
 
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
 resource "google_compute_router_peer" "router_peers" {
   for_each = merge(values(local.map).*.tunnels...)
 
@@ -169,14 +170,11 @@ resource "google_compute_router_peer" "router_peers" {
   ]
 }
 
-locals {
-  vpn_gateway_list = values(google_compute_vpn_tunnel.vpn_tunnels).*.vpn_gateway
-}
-
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_spoke
 resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
   for_each = { for k, v in local.distinct_map : k => v if(
     v.is_hub &&
-    var.ncc_hub != null &&
+    v.use_ncc_hub &&
     can(index(values(google_compute_vpn_tunnel.vpn_tunnels).*.region, v.region))
   ) }
 
@@ -185,7 +183,8 @@ resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
 
   location = each.value.region
 
-  hub = var.ncc_hub.id
+  # hub = format("%s-%s", var.config_map[each.value.key].prefix, local.random_id.hex)
+  hub = each.value.network
 
   linked_vpn_tunnels {
     site_to_site_data_transfer = true

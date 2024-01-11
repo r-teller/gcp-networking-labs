@@ -26,7 +26,7 @@ variable "config_map" {
         ip_cidr_range       = string
         tags                = optional(list(string), [])
         secondary_ip_ranges = optional(list(string), [])
-      })))
+      })), [])
       private_service_ranges = optional(list(object({
         region        = string
         ip_cidr_range = string
@@ -42,7 +42,7 @@ variable "input" {
   type = object({
     routing_mode   = string,
     config_map_tag = string,
-    ncc_hub        = optional(bool, false),
+    create_ncc_hub = optional(bool, false),
   })
 }
 

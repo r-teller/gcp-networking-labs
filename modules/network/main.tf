@@ -132,8 +132,13 @@ resource "google_compute_router" "router" {
   network = google_compute_network.network.self_link
 
   region = each.key
+
   bgp {
-    asn               = try(local.config_map.regional_asn[each.key], local.config_map.shared_asn, var.default_asn)
+    asn = coalesce(
+      try(local.config_map.regional_asn[each.key], null),
+      local.config_map.shared_asn,
+      var.default_asn
+    )
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local.config_map, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
   }
@@ -177,7 +182,7 @@ resource "google_compute_router_nat" "router_nat" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_hub
 resource "google_network_connectivity_hub" "connectivity_hub" {
-  count = var.input.ncc_hub ? 1 : 0
+  count = var.input.create_ncc_hub ? 1 : 0
 
   project = var.project_id
 
@@ -191,7 +196,7 @@ resource "google_network_connectivity_hub" "connectivity_hub" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
 resource "google_compute_router_interface" "router_interface-nic0" {
-  for_each = { for x in local.config_map["subnetworks"] : x.ip_cidr_range => x if(contains(x.tags, "network_appliance") && var.input.ncc_hub) }
+  for_each = { for x in local.config_map["subnetworks"] : x.ip_cidr_range => x if(contains(x.tags, "network_appliance") && var.input.create_ncc_hub) }
 
   project = var.project_id
 
@@ -203,7 +208,7 @@ resource "google_compute_router_interface" "router_interface-nic0" {
 }
 
 resource "google_compute_router_interface" "router_interface-nic1" {
-  for_each = { for x in local.config_map["subnetworks"] : x.ip_cidr_range => x if(contains(x.tags, "network_appliance") && var.input.ncc_hub) }
+  for_each = { for x in local.config_map["subnetworks"] : x.ip_cidr_range => x if(contains(x.tags, "network_appliance") && var.input.create_ncc_hub) }
 
   project = var.project_id
 

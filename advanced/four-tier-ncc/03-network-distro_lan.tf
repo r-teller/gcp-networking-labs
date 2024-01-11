@@ -6,7 +6,7 @@ module "network-distro_lan" {
   input = {
     config_map_tag = "distro_lan"
     routing_mode   = "REGIONAL"
-    ncc_hub        = true
+    create_ncc_hub = true
   }
   random_id = random_id.id
 }

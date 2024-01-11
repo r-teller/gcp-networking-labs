@@ -34,18 +34,19 @@ module "ha_vpn_peering-access_trusted" {
   source     = "../../modules/ha_vpn_peering"
   config_map = local._networks
   project_id = var.project_id
-  ncc_hub    = module.network-access_trusted_transit.ncc_hub
   input_list = [
     {
-      regions = ["us-east4"]
       networks = {
         hub   = "access_trusted_transit",
         spoke = "shared_aa00_nonprod",
       }
+      regions      = ["us-east4"]
+      use_ncc_hub  = true
       tunnel_count = 1
     },
     {
-      regions = ["us-east4", "us-west1"]
+      regions     = ["us-east4", "us-west1"]
+      use_ncc_hub = true
       networks = {
         hub   = "access_trusted_transit",
         spoke = "shared_aa00_prod",

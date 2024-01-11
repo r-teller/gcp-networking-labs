@@ -6,7 +6,7 @@ module "network-core_wan" {
   input = {
     config_map_tag = "core_wan"
     routing_mode   = "GLOBAL"
-    ncc_hub        = true
+    create_ncc_hub = true
   }
   random_id = random_id.id
 }

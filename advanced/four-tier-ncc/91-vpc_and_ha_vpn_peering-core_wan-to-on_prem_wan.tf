@@ -9,10 +9,10 @@ module "ha_vpn_peering-core_wan" {
   source     = "../../modules/ha_vpn_peering"
   config_map = local._networks
   project_id = var.project_id
-  ncc_hub    = module.network-core_wan.ncc_hub
   input_list = [
     {
-      regions = ["us-east4"]
+      regions     = ["us-east4"]
+      use_ncc_hub = true
       networks = {
         hub   = "core_wan",
         spoke = "on_prem_wan",

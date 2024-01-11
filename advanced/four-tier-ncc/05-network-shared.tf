@@ -6,7 +6,7 @@ module "network-shared_aa00_prod" {
   input = {
     config_map_tag = "shared_aa00_prod"
     routing_mode   = "REGIONAL"
-    ncc_hub        = true
+    create_ncc_hub = false
   }
   random_id = random_id.id
 }
@@ -19,7 +19,7 @@ module "network-shared_aa00_nonprod" {
   input = {
     config_map_tag = "shared_aa00_nonprod"
     routing_mode   = "REGIONAL"
-    ncc_hub        = true
+    create_ncc_hub = false
   }
   random_id = random_id.id
 }
