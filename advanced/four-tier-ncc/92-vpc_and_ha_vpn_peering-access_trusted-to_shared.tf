@@ -3,6 +3,8 @@ resource "null_resource" "vpc_and_ha_vpn_peering-access_trusted" {
     module.network-access_trusted_transit,
     module.network-access_trusted_aa00,
     module.network-access_trusted_ab00,
+    module.network-shared_aa00_nonprod,
+    module.network-shared_aa00_prod,
   ]
 }
 

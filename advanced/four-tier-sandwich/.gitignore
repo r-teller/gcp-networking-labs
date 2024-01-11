@@ -1,6 +1,8 @@
 # Local staging directories
 **/.staging/
 **/.staging/*
+/config/*
+gitignore.tf
 
 # .terraform directory
 **/.terraform/*
@@ -8,6 +10,8 @@
 # .tfstate files
 *.tfstate
 *.tfstate.*
+
+*.tfvars
 
 # terraform lock file
 *.terraform.lock.*
