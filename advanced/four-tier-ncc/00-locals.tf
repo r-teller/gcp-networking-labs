@@ -3,9 +3,41 @@ module "utils" {
 }
 
 locals {
+  continent_short_name = {
+    asia         = "az"
+    australia    = "au"
+    europe       = "eu"
+    northamerica = "na"
+    southamerica = "sa"
+    us           = "us"
+    me           = "me"
+  }
   _default_asn = 65534
 
   _networks = {
+    mgmt : {
+      prefix : "ha-mgmt",
+      cloud_nat_all_subnets = true
+      private_service_ranges = [
+        # {
+        #   region        = "us-east4",
+        #   ip_cidr_range = "192.168.128.0/28"
+        # },
+      ]
+      subnetworks : [
+        {
+          region : "us-east4",
+          ip_cidr_range : "192.168.255.0/27",
+          tags = ["mgmt"],
+        },
+        {
+          region : "us-west1",
+          ip_cidr_range : "192.168.255.32/27",
+          tags = ["mgmt"],
+        }
+      ]
+    }
+
     on_prem_wan = {
       prefix = "on-prem-wan"
       ## if regional ASN exists it will be preferred over the shared ASN
@@ -104,6 +136,10 @@ locals {
         europe-west3 : 4231000000,
       }
       advertise_local_subnets = false
+      summary_ip_ranges = {
+        "us-east4" : ["172.16.0.0/12"],
+        "us-west1" : ["172.16.0.0/12"],
+      }
       # summary_ip_ranges = {
       #   "us-east4" : [
       #     "10.0.0.0/11"
@@ -188,7 +224,7 @@ locals {
         asia-southeast1 : 4222000002,
         europe-west3 : 4232000002,
       }
-      advertise_local_subnets = false
+      advertise_local_subnets = true
       summary_ip_ranges = {
         "us-east4" : [
           "10.0.0.0/16"
@@ -238,7 +274,21 @@ locals {
         asia-southeast1 : 4222000003,
         europe-west3 : 4232000003,
       }
-      advertise_local_subnets = false
+      advertise_local_subnets = true
+      summary_ip_ranges = {
+        "us-east4" : [
+          "10.1.0.0/16"
+        ],
+        "us-west1" : [
+          "10.33.0.0/16"
+        ],
+        "asia-southeast1" : [
+          "10.65.0.0/16"
+        ],
+        "europe-west3" : [
+          "10.97.0.0/16"
+        ],
+      }
       subnetworks = [
         {
 
@@ -276,7 +326,7 @@ locals {
       advertise_local_subnets = false
       summary_ip_ranges = {
         "us-east4" : ["10.0.96.0/22"]
-        # "us-west1" : ["10.32.96.0/22"]
+        "us-west1" : ["10.32.96.0/22"]
       }
       private_service_ranges = [
         {
@@ -311,8 +361,8 @@ locals {
       }
       advertise_local_subnets = false
       summary_ip_ranges = {
-        # "us-east4" : ["10.0.0.0/21"],
-        # "us-west1" : ["10.32.0.0/21"],
+        "us-east4" : ["10.0.0.0/21"],
+        "us-west1" : ["10.32.0.0/21"],
       }
       private_service_ranges = [
         {
@@ -336,6 +386,43 @@ locals {
         {
           region = "us-west1",
           ip_cidr_range : "10.32.0.0/27",
+        }
+      ]
+    }
+
+
+    shared_ab00_nonprod = {
+      prefix = "shared-ab00-nonprod"
+      ## if regional ASN exists it will be preferred over the shared ASN
+      regional_asn = {
+        us-east4 : 4203000011,
+        us-west1 : 4213000011,
+        asia-southeast1 : 4223000011,
+        europe-west3 : 4233000011,
+      }
+      advertise_local_subnets = false
+      summary_ip_ranges = {
+        "us-east4" : ["10.1.0.0/21"],
+        "us-west1" : ["10.33.0.0/21"],
+      }
+      private_service_ranges = [
+        {
+          region        = "us-east4",
+          ip_cidr_range = "10.1.3.0/24"
+        },
+        {
+          region        = "us-west1",
+          ip_cidr_range = "10.33.3.0/24"
+        }
+      ]
+      subnetworks = [
+        {
+          region = "us-east4",
+          ip_cidr_range : "10.1.0.0/27",
+        },
+        {
+          region = "us-west1",
+          ip_cidr_range : "10.33.0.0/27",
         }
       ]
     }

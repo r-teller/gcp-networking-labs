@@ -6,6 +6,36 @@ data "google_compute_default_service_account" "compute_default_service_account" 
   project = var.project_id
 }
 
+resource "tls_private_key" "default" {
+  count     = var.input.ssh_keys == null ? 1 : 0
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# filename = "./config/${each.value.name}/config.boot"
+# content = templatefile("${path.module}/template/${local.core_wan-to-distro_lan-vyos.prefix}/config.boot.tmpl",
+
+resource "local_file" "private_key" {
+  count = var.input.ssh_keys == null ? 1 : 0
+
+  filename = "./config/test.key"
+  content  = tls_private_key.default[0].private_key_pem
+}
+
+resource "google_storage_bucket_object" "init_cfg" {
+  for_each = { for k, v in local.map : k => v if var.bucket_name != null }
+
+  name = format("%s/config/init-cfg.txt", each.value.name)
+
+  content = templatefile("${path.module}/templatefile/init-cfg.tmpl",
+    {
+      "op-command-modes" : var.input.mgmt_interface_swap ? "mgmt-interface-swap" : ""
+      "plugin-op-commands" : var.input.plugin_op_commands != null ? join(",", [for k, v in var.input.plugin_op_commands : format("%s:%s", k, v)]) : ""
+    }
+  )
+  bucket = var.bucket_name
+}
+
 resource "google_compute_address" "external_addresses" {
   for_each     = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.external_enabled }
   name         = format("%s-ext", each.key)
@@ -29,7 +59,9 @@ resource "google_compute_instance" "instances" {
   for_each = local.map
 
   depends_on = [
-    google_compute_address.internal_addresses
+    google_compute_address.internal_addresses,
+    google_compute_address.external_addresses,
+    google_storage_bucket_object.init_cfg,
   ]
 
   project = var.project_id
@@ -43,25 +75,29 @@ resource "google_compute_instance" "instances" {
 
     initialize_params {
       image = var.image
-      size  = 10
-      type  = "pd-standard"
+      type  = "pd-ssd"
     }
-
-    mode = "READ_WRITE"
   }
 
-  can_ip_forward            = true
+  tags = var.input.network_tags
+
   deletion_protection       = false
+  can_ip_forward            = true
   enable_display            = false
   allow_stopping_for_update = true
 
   machine_type = each.value.machine_type
-
+  # {foo:"bar",alpha:"bravo"}
   metadata = {
-    serial-port-enable = "TRUE"
-    # pubsub-subscription     = each.value.name
-    # configuration_bucket_id = google_storage_bucket.bucket.name
-    # configuration_object_id = each.value.bucket_object
+    mgmt-interface-swap                  = var.input.mgmt_interface_swap ? "enable" : null
+    vmseries-bootstrap-gce-storagebucket = var.input.bootstrap_enabled ? format("%s/%s", var.bucket_name, each.value.name) : null
+    serial-port-enable                   = true
+    ssh-keys                             = var.input.ssh_keys != null ? "admin:${var.input.ssh_keys}" : "admin:${tls_private_key.default[0].public_key_openssh}"
+  }
+
+  service_account {
+    email  = each.value.service_account
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 
   dynamic "network_interface" {
@@ -70,19 +106,13 @@ resource "google_compute_instance" "instances" {
       network_ip         = google_compute_address.internal_addresses[network_interface.key].address
       subnetwork         = format("%s-%s", network_interface.value.subnetwork, local.random_id.hex)
       subnetwork_project = var.project_id
+      dynamic "access_config" {
+        for_each = network_interface.value.external_enabled ? [1] : []
+        content {
+          nat_ip = google_compute_address.external_addresses[network_interface.key].address
+        }
+      }
     }
-  }
-
-  scheduling {
-    automatic_restart   = true
-    on_host_maintenance = "MIGRATE"
-    preemptible         = false
-    provisioning_model  = "STANDARD"
-  }
-
-  service_account {
-    email  = each.value.service_account
-    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 
   lifecycle {

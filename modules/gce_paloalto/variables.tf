@@ -1,12 +1,17 @@
-
 variable "default_asn" {
   type    = number
   default = 65534
 }
 
+variable "bucket_name" {
+  type    = string
+  default = null
+}
+
 variable "project_id" {
   type = string
 }
+
 
 variable "config_map" {
   description = "Map of network configurations"
@@ -36,19 +41,29 @@ variable "random_id" {
   default = null
 }
 
+
 variable "image" {
-  type    = string
-  default = "projects/rteller-demo-host-aaaa/global/images/vyos-advanced-v1-3-5"
+  // Hourly Licenses
+  default = "https://www.googleapis.com/compute/v1/projects/paloaltonetworksgcp-public/global/images/vmseries-flex-bundle1-1110"
+  # default = "https://www.googleapis.com/compute/v1/projects/paloaltonetworksgcp-public/global/images/vmseries-bundle2-1110"
+
+  // BYOL License  
+  # default = "https://www.googleapis.com/compute/v1/projects/paloaltonetworksgcp-public/global/images/vmseries-byol-1110"
 }
 
 variable "input" {
   type = object({
-    name_prefix     = string
-    shared_asn      = optional(number, null)
-    regional_asn    = optional(map(number))
-    machine_type    = optional(string, "n2-standard-4")
-    zones           = map(number)
-    service_account = string
+    name_prefix         = string
+    shared_asn          = optional(number, null)
+    regional_asn        = optional(map(number))
+    machine_type        = optional(string, "n2-standard-8")
+    bootstrap_enabled   = optional(bool, true)
+    mgmt_interface_swap = optional(bool, true)
+    plugin_op_commands  = optional(map(string), null)
+    zones               = map(number)
+    network_tags        = optional(list(string), [])
+    ssh_keys            = optional(string, null)
+    service_account     = string
     interfaces = map(object({
       config_map_tag   = string
       subnetwork_tag   = optional(string, null)

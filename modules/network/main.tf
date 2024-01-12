@@ -141,6 +141,13 @@ resource "google_compute_router" "router" {
     )
     advertise_mode    = "CUSTOM"
     advertised_groups = lookup(local.config_map, "advertise_local_subnets", false) ? ["ALL_SUBNETS"] : []
+
+    dynamic "advertised_ip_ranges" {
+      for_each = try(local.config_map.summary_ip_ranges[each.key], [])
+      content {
+        range = advertised_ip_ranges.value
+      }
+    }
   }
 }
 

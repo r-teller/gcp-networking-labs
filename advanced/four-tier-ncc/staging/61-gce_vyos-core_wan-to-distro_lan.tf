@@ -1,5 +1,5 @@
 module "core_wan-to-distro_lan" {
-  count  = 1
+  count  = 0
   source = "../../modules/gce_vyos"
 
   depends_on = [
@@ -13,7 +13,7 @@ module "core_wan-to-distro_lan" {
   input = {
     name_prefix     = "core-wan-to-distro-lan"
     machine_type    = "n2d-standard-2"
-    service_account = google_service_account.vyos_compute_sa.email
+    service_account = google_service_account.service_account.email
 
     regional_asn = {
       us-east4 : 4204100000,
@@ -31,12 +31,12 @@ module "core_wan-to-distro_lan" {
       0 = {
         config_map_tag = "core_wan"
         subnetwork_tag = "network_appliance"
-        ncc_hub        = module.network-core_wan.ncc_hub
+        use_ncc_hub    = true
       }
       1 = {
         config_map_tag = "distro_lan"
         subnetwork_tag = "network_appliance"
-        ncc_hub        = module.network-distro_lan.ncc_hub
+        use_ncc_hub    = true
       }
     }
   }

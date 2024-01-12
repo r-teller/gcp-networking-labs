@@ -4,6 +4,7 @@ resource "null_resource" "vpc_and_ha_vpn_peering-access_trusted" {
     module.network-access_trusted_aa00,
     module.network-access_trusted_ab00,
     module.network-shared_aa00_nonprod,
+    module.network-shared_ab00_nonprod,
     module.network-shared_aa00_prod,
   ]
 }
@@ -21,9 +22,14 @@ module "vpc_peering-access_trusted" {
     },
     {
       ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
-      hub   = "access_trusted_ab00",
+      hub   = "access_trusted_aa00",
       spoke = "shared_aa00_prod",
-    }
+    },
+    {
+      ## VPC Peering from access-trusted-transit to shared-vpc-nonprod
+      hub   = "access_trusted_ab00",
+      spoke = "shared_ab00_nonprod",
+    },
   ]
 
   depends_on = [
@@ -54,7 +60,16 @@ module "ha_vpn_peering-access_trusted" {
         spoke = "shared_aa00_prod",
       }
       tunnel_count = 1
-    }
+    },
+    {
+      networks = {
+        hub   = "access_trusted_transit",
+        spoke = "shared_ab00_nonprod",
+      }
+      regions      = ["us-east4"]
+      use_ncc_hub  = true
+      tunnel_count = 1
+    },
   ]
 
   random_id = random_id.id

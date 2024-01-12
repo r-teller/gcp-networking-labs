@@ -1,16 +1,16 @@
 resource "null_resource" "echo" {
   depends_on = [
-    google_compute_subnetwork.shared_aa00_prod,
-    google_compute_subnetwork.shared_aa00_nonprod,
+    module.network-access_trusted_aa00,
+    module.network-access_trusted_ab00,
   ]
 }
 
 locals {
   echo = {
-    networks     = ["shared_aa00_nonprod", "shared_aa00_prod"]
-    machine_type = "n2d-standard-2"
+    networks     = ["access_trusted_aa00", "access_trusted_ab00"]
+    machine_type = "e2-micro"
     zones = {
-      "us-east4-a" = 1
+      "us-east4-a" = 0
       "us-west1-a" = 1
     }
   }

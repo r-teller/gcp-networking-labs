@@ -38,17 +38,17 @@ module "distro_lan-to-access_trusted" {
       1 = {
         config_map_tag = "access_trusted_transit"
         subnetwork_tag = "network_appliance"
-        # ncc_hub_id = module.network-access_trusted_transit.ncc_hub.id
+        ncc_hub_id     = module.network-access_trusted_transit.ncc_hub.id
       }
       2 = {
         config_map_tag = "access_trusted_aa00"
         subnetwork_tag = "network_appliance"
-        # ncc_hub_id = module.network-access_trusted_aa00.ncc_hub.id
+        ncc_hub_id     = module.network-access_trusted_aa00.ncc_hub.id
       }
       3 = {
         config_map_tag = "access_trusted_ab00"
         subnetwork_tag = "network_appliance"
-        # ncc_hub_id = module.network-access_trusted_ab00.ncc_hub.id
+        ncc_hub_id     = module.network-access_trusted_ab00.ncc_hub.id
       }
     }
   }
