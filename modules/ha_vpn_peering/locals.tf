@@ -114,12 +114,13 @@ locals {
   }
 
   distinct_map = merge([for v in local.map : { format("%s-%s", v.key, v.region) = {
-    name        = v.name
-    region      = v.region,
-    network     = v.network
-    key         = v.key
-    asn         = v.asn
-    is_hub      = v.is_hub
-    use_ncc_hub = v.use_ncc_hub
+    name         = v.name
+    region       = v.region,
+    network      = v.network
+    key          = v.key
+    asn          = v.asn
+    is_hub       = v.is_hub
+    tunnel_count = v.tunnel_count
+    use_ncc_hub  = v.use_ncc_hub
   } }]...)
 }

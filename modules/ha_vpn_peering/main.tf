@@ -175,7 +175,7 @@ resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
   for_each = { for k, v in local.distinct_map : k => v if(
     v.is_hub &&
     v.use_ncc_hub &&
-    can(index(values(google_compute_vpn_tunnel.vpn_tunnels).*.region, v.region))
+    v.tunnel_count > 0
   ) }
 
   project = var.project_id
@@ -193,6 +193,8 @@ resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
   }
 
   depends_on = [
+    google_compute_router.routers,
+    google_compute_router_interface.router_interfaces,
     google_compute_vpn_tunnel.vpn_tunnels
   ]
 }
