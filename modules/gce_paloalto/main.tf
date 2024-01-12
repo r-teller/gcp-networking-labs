@@ -23,7 +23,7 @@ resource "local_file" "private_key" {
 }
 
 resource "google_storage_bucket_object" "init_cfg" {
-  for_each = { for k, v in local.map : k => v if var.bucket_name != null }
+  for_each = { for k, v in local.map : k => v if var.input.bootstrap_enabled }
 
   name = format("%s/config/init-cfg.txt", each.value.name)
 

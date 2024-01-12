@@ -19,7 +19,7 @@ variable "config_map" {
     prefix                  = string
     shared_asn              = optional(number)
     regional_asn            = optional(map(number))
-    advertise_local_subnets = bool
+    advertise_local_subnets = optional(bool,false)
     summary_ip_ranges       = optional(map(list(string)))
     subnetworks = list(object({
       region              = string
