@@ -26,6 +26,7 @@ resource "google_storage_bucket_object" "init_cfg" {
 
   content = templatefile("${path.module}/templatefile/init-cfg.tmpl",
     {
+      "redis-config" : try(var.input.regional_redis[each.value.region], null)
       "op-command-modes" : var.input.mgmt_interface_swap ? "mgmt-interface-swap" : ""
       "plugin-op-commands" : var.input.plugin_op_commands != null ? join(",", [for k, v in var.input.plugin_op_commands : format("%s:%s", k, v)]) : ""
     }

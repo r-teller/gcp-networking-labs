@@ -53,11 +53,16 @@ variable "image" {
 
 variable "input" {
   type = object({
-    name_prefix         = string
-    shared_asn          = optional(number, null)
-    regional_asn        = optional(map(number))
-    machine_type        = optional(string, "n2-standard-8")
-    bootstrap_enabled   = optional(bool, true)
+    name_prefix       = string
+    shared_asn        = optional(number, null)
+    regional_asn      = optional(map(number))
+    machine_type      = optional(string, "n2-standard-8")
+    bootstrap_enabled = optional(bool, true)
+    regional_redis = optinal(map(object({
+      endpoint    = string
+      auth_token  = string
+      certificate = string
+    })))
     mgmt_interface_swap = optional(bool, true)
     plugin_op_commands  = optional(map(string), null)
     zones               = map(number)
@@ -70,6 +75,7 @@ variable "input" {
       external_enabled = optional(bool, false)
       use_ncc_hub      = optional(bool, false)
     }))
+
   })
 }
 
