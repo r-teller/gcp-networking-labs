@@ -64,7 +64,7 @@ module "distro_lan-to-access_trusted" {
       4 = {
         config_map_tag = "access_trusted_transit"
         subnetwork_tag = "network_appliance"
-        use_ncc_hub    = true
+        use_ncc_hub    = false
       }
     }
   }

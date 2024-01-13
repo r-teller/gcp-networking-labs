@@ -12,9 +12,6 @@ resource "tls_private_key" "default" {
   rsa_bits  = 2048
 }
 
-# filename = "./config/${each.value.name}/config.boot"
-# content = templatefile("${path.module}/template/${local.core_wan-to-distro_lan-vyos.prefix}/config.boot.tmpl",
-
 resource "local_file" "private_key" {
   count = var.input.ssh_keys == null ? 1 : 0
 
@@ -89,7 +86,7 @@ resource "google_compute_instance" "instances" {
   machine_type = each.value.machine_type
   # {foo:"bar",alpha:"bravo"}
   metadata = {
-    mgmt-interface-swap                  = var.input.mgmt_interface_swap ? "enable" : null
+    mgmt-interface-swap                  = var.input.bootstrap_enabled ? null : (var.input.mgmt_interface_swap ? "enable" : null)
     vmseries-bootstrap-gce-storagebucket = var.input.bootstrap_enabled ? format("%s/%s", var.bucket_name, each.value.name) : null
     serial-port-enable                   = true
     ssh-keys                             = var.input.ssh_keys != null ? "admin:${var.input.ssh_keys}" : "admin:${tls_private_key.default[0].public_key_openssh}"
