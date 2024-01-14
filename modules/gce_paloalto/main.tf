@@ -15,10 +15,126 @@ resource "tls_private_key" "default" {
 resource "local_file" "private_key" {
   count = var.input.ssh_keys == null ? 1 : 0
 
-  filename = "./config/test.key"
+  filename = "./local_config/test.key"
   content  = tls_private_key.default[0].private_key_pem
 }
 
+resource "local_file" "init_cfg" {
+  for_each = { for k, v in local.map : k => v if var.input.bootstrap_enabled }
+
+  filename = format("./local_config/%s/config/init-cfg.txt", each.value.name)
+
+  content = templatefile("${path.module}/templatefile/init-cfg.tmpl",
+    {
+      "redis-config" : try(var.input.regional_redis[each.value.region], null)
+      "op-command-modes" : var.input.mgmt_interface_swap ? "mgmt-interface-swap" : ""
+      "plugin-op-commands" : var.input.plugin_op_commands != null ? join(",", [for k, v in var.input.plugin_op_commands : format("%s:%s", k, v)]) : ""
+    }
+  )
+}
+
+resource "local_file" "bootstrap_json" {
+  for_each = { for k1, v1 in local.map : k1 => merge(v1, {
+    subnetworks = { for k2, v2 in v1.subnetworks : k2 => merge(v2,
+      {
+        ipv4_address : google_compute_address.internal_addresses[k2].address
+        ipv4_prefix : split("/", v2.cidr_range)[1]
+        bgp_peers : {
+          (v2.network_prefix) = {
+            (format("%s-nic0", v2.network_prefix)) = {
+              interface = v2.ethernet
+              local_address =  google_compute_address.internal_addresses[k2].address
+              peer_address = cidrhost(v2.cidr_range, -4),
+              peer_asn = try(
+                var.config_map[v2.network].regional_asn[v1.region],
+                var.config_map[v2.network].shared_asn,
+                var.default_asn,
+              ),
+            }
+            (format("%s-nic1", v2.network_prefix)) = {
+              interface = v2.ethernet
+              local_address =  google_compute_address.internal_addresses[k2].address
+              peer_address = cidrhost(v2.cidr_range, -3),
+              peer_asn = try(
+                var.config_map[v2.network].regional_asn[v1.region],
+                var.config_map[v2.network].shared_asn,
+                var.default_asn,
+              ),
+            }
+          }
+        }
+      }
+      ) if v2.ethernet != null
+    }
+  }) if var.input.bootstrap_enabled }
+
+  filename = format("./local_config/%s/config/bootstrap.json", each.value.name)
+
+  content = jsonencode({
+    name : each.value.shortname,
+    interfaces : each.value.subnetworks,
+    bootstrap_bgp : var.input.bootstrap_bgp,
+    asn : try(
+      var.input.regional_asn[each.value.region],
+      var.input.shared_asn,
+      var.default_asn,
+    )
+    neighbors : merge(values(each.value.subnetworks).*.bgp_peers...)
+  })
+}
+
+
+resource "local_file" "bootstrap_xml" {
+  for_each = { for k1, v1 in local.map : k1 => merge(v1, {
+    subnetworks = { for k2, v2 in v1.subnetworks : k2 => merge(v2,
+      {
+        ipv4_address : google_compute_address.internal_addresses[k2].address
+        ipv4_prefix : split("/", v2.cidr_range)[1]
+        bgp_peers : {
+          (v2.network_prefix) = {
+            (format("%s-nic0", v2.network_prefix)) = {
+              interface = v2.ethernet
+              local_address =  google_compute_address.internal_addresses[k2].address
+              peer_address = cidrhost(v2.cidr_range, -4),
+              peer_asn = try(
+                var.config_map[v2.network].regional_asn[v1.region],
+                var.config_map[v2.network].shared_asn,
+                var.default_asn,
+              ),
+            }
+            (format("%s-nic1", v2.network_prefix)) = {
+              interface = v2.ethernet
+              local_address =  google_compute_address.internal_addresses[k2].address
+              peer_address = cidrhost(v2.cidr_range, -3),
+              peer_asn = try(
+                var.config_map[v2.network].regional_asn[v1.region],
+                var.config_map[v2.network].shared_asn,
+                var.default_asn,
+              ),
+            }
+          }
+        }
+      }
+      ) if v2.ethernet != null
+    }
+  }) if var.input.bootstrap_enabled }
+
+  filename = format("./local_config/%s/config/bootstrap.xml", each.value.name)
+
+  content = templatefile("${path.module}/templatefile/bootstrap_v11_1_0.tmpl",
+    {
+      name : each.value.shortname,
+      interfaces : each.value.subnetworks,
+      bootstrap_bgp : var.input.bootstrap_bgp,
+      asn : try(
+        var.input.regional_asn[each.value.region],
+        var.input.shared_asn,
+        var.default_asn,
+      )
+      neighbors : merge(values(each.value.subnetworks).*.bgp_peers...)
+    }
+  )
+}
 resource "google_storage_bucket_object" "init_cfg" {
   for_each = { for k, v in local.map : k => v if var.input.bootstrap_enabled }
 
@@ -54,7 +170,7 @@ resource "google_compute_address" "internal_addresses" {
 }
 
 resource "google_compute_instance" "instances" {
-  for_each = local.map
+  for_each = { for k, v in local.map : k => v if var.create_vms }
 
   depends_on = [
     google_compute_address.internal_addresses,
@@ -120,7 +236,7 @@ resource "google_compute_instance" "instances" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_spoke
 resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
-  for_each = { for x in distinct(values(merge(values(local.map).*.subnetworks...))) : x.ncc_spoke => x if x.use_ncc_hub }
+  for_each = { for x in distinct(values(merge(values(local.map).*.subnetworks...))) : x.ncc_spoke => x if x.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 
@@ -150,7 +266,7 @@ resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
 resource "google_compute_router_peer" "router_peer-nic0" {
-  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub }
+  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 
@@ -178,7 +294,7 @@ resource "google_compute_router_peer" "router_peer-nic0" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
 resource "google_compute_router_peer" "router_peer-nic1" {
-  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub }
+  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 

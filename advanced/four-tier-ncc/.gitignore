@@ -1,7 +1,7 @@
 # Local staging directories
 **/.staging/
 **/.staging/*
-/config/*
+/local_config/*
 gitignore.tf
 
 # .terraform directory

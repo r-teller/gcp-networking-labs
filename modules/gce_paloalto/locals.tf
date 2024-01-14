@@ -23,6 +23,16 @@ locals {
           idx,
           local.random_id.hex
         )
+
+        shortname = format("palo-%s-%02d-%s",
+          join("", [
+            local.continent_short_name[split("-", k1)[0]],
+            replace(join("", slice(split("-", k1), 1, 3)), "/(n)orth|(s)outh|(e)ast|(w)est|(c)entral/", "$1$2$3$4$5")
+          ]),
+          idx,
+          local.random_id.hex
+        )
+
         machine_type    = var.input.machine_type
         zone            = k1
         region          = regex("^(.*)-.", k1)[0]
@@ -31,10 +41,22 @@ locals {
     }
   ]...)
 
-
   map = { for k1, v1 in local._map : k1 => merge(v1, {
     subnetworks = { for k2, v2 in var.input.interfaces : format("%s-%s", k1, k2) => {
-      nic = format("eth%d", k2)
+      # swapped_management_nic =  (        var.input.mgmt_interface_swap == true && k2 != 1      )
+      nic = tonumber(k2)
+      ethernet = (
+        var.input.mgmt_interface_swap == true && tonumber(k2) != 1
+        ) ? (
+        tonumber(k2) > 1
+        ? format("ethernet1/%d", tonumber(k2) - 1)
+        : format("ethernet1/%d", tonumber(k2))
+        ) : (
+        var.input.mgmt_interface_swap == false && tonumber(k2) != 0
+        ? format("ethernet1/%d", tonumber(k2) - 1)
+        : null
+      )
+      
       cidr_range = [
         for subnetwork in var.config_map[v2.config_map_tag].subnetworks :
         subnetwork.ip_cidr_range if(

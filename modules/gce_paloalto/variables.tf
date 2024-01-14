@@ -12,6 +12,11 @@ variable "project_id" {
   type = string
 }
 
+variable "create_vms" {
+  type    = bool
+  default = true
+}
+
 
 variable "config_map" {
   description = "Map of network configurations"
@@ -58,11 +63,13 @@ variable "input" {
     regional_asn      = optional(map(number))
     machine_type      = optional(string, "n2-standard-8")
     bootstrap_enabled = optional(bool, true)
-    regional_redis = optinal(map(object({
-      endpoint    = string
-      auth_token  = string
-      certificate = string
-    })))
+    bootstrap_bgp     = optional(bool, false)
+    regional_redis    = optional(any, null)
+    # regional_redis = optional(map(object({
+    #   endpoint    = string
+    #   auth_token  = string
+    #   certificate = string,
+    # })))
     mgmt_interface_swap = optional(bool, true)
     plugin_op_commands  = optional(map(string), null)
     zones               = map(number)

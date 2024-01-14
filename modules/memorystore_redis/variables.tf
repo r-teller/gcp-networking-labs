@@ -34,15 +34,9 @@ variable "input" {
     name_prefix = string
     regions = map(object({
       ip_cidr_range = string
-      replica_count = optional(number, 1)
       size          = optional(number, 5)
-      version       = optiona(string, "redis_7_0")
+      version       = optional(string, "REDIS_7_0")
     }))
     config_map_tag = string,
   })
-}
-
-
-output "cache" {
-  value = local.cache
 }

@@ -1,0 +1,480 @@
+<?xml version="1.0"?>
+<config version="11.1.0" urldb="paloaltonetworks" detail-version="11.1.0">
+  <mgt-config>
+    <users>
+      <entry name="admin">
+        <phash>*</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>8</minimum-length>
+    </password-complexity>
+  </mgt-config>
+  <shared>
+    <application/>
+    <application-group/>
+    <service/>
+    <service-group/>
+    <botnet>
+      <configuration>
+        <http>
+          <dynamic-dns>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </dynamic-dns>
+          <malware-sites>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </malware-sites>
+          <recent-domains>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </recent-domains>
+          <ip-domains>
+            <enabled>yes</enabled>
+            <threshold>10</threshold>
+          </ip-domains>
+          <executables-from-unknown-sites>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </executables-from-unknown-sites>
+        </http>
+        <other-applications>
+          <irc>yes</irc>
+        </other-applications>
+        <unknown-applications>
+          <unknown-tcp>
+            <destinations-per-hour>10</destinations-per-hour>
+            <sessions-per-hour>10</sessions-per-hour>
+            <session-length>
+              <maximum-bytes>100</maximum-bytes>
+              <minimum-bytes>50</minimum-bytes>
+            </session-length>
+          </unknown-tcp>
+          <unknown-udp>
+            <destinations-per-hour>10</destinations-per-hour>
+            <sessions-per-hour>10</sessions-per-hour>
+            <session-length>
+              <maximum-bytes>100</maximum-bytes>
+              <minimum-bytes>50</minimum-bytes>
+            </session-length>
+          </unknown-udp>
+        </unknown-applications>
+      </configuration>
+      <report>
+        <topn>100</topn>
+        <scheduled>yes</scheduled>
+      </report>
+    </botnet>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <network>
+        <interface>
+          <ethernet tag="Children_added_by_terraform">
+%{ for interface in interfaces ~}
+            <entry name="${interface.ethernet}">
+              <layer3>
+                <ip>
+                  <entry name="${interface.ipv4_address}/${interface.ipv4_prefix}"/>
+                </ip>
+                <lldp>
+                  <enable>no</enable>
+                </lldp>
+              </layer3>
+            </entry>
+%{ endfor ~}
+          </ethernet>
+        </interface>
+        <profiles>
+          <monitor-profile>
+            <entry name="default">
+              <interval>3</interval>
+              <threshold>5</threshold>
+              <action>wait-recover</action>
+            </entry>
+          </monitor-profile>
+          <interface-management-profile tag="Children_added_by_terraform">
+              <entry name="allow_https" tag="Managed_by_terraform">
+                <permitted-ip>
+                  <entry name="192.168.0.0/16"/>
+                  <entry name="172.16.0.0/12"/>
+                  <entry name="10.0.0.0/8"/>
+                  <entry name="35.191.0.0/16"/>
+                  <entry name="130.211.0.0/22"/>
+                </permitted-ip>
+                <https>yes</https>
+              </entry>
+          </interface-management-profile>
+        </profiles>
+        <ike>
+          <crypto-profiles>
+            <ike-crypto-profiles>
+              <entry name="default">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                  <member>3des</member>
+                </encryption>
+                <hash>
+                  <member>sha1</member>
+                </hash>
+                <dh-group>
+                  <member>group2</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-128">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                </encryption>
+                <hash>
+                  <member>sha256</member>
+                </hash>
+                <dh-group>
+                  <member>group19</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-256">
+                <encryption>
+                  <member>aes-256-cbc</member>
+                </encryption>
+                <hash>
+                  <member>sha384</member>
+                </hash>
+                <dh-group>
+                  <member>group20</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+            </ike-crypto-profiles>
+            <ipsec-crypto-profiles>
+              <entry name="default">
+                <esp>
+                  <encryption>
+                    <member>aes-128-cbc</member>
+                    <member>3des</member>
+                  </encryption>
+                  <authentication>
+                    <member>sha1</member>
+                  </authentication>
+                </esp>
+                <dh-group>group2</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-128">
+                <esp>
+                  <encryption>
+                    <member>aes-128-gcm</member>
+                  </encryption>
+                  <authentication>
+                    <member>none</member>
+                  </authentication>
+                </esp>
+                <dh-group>group19</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+              <entry name="Suite-B-GCM-256">
+                <esp>
+                  <encryption>
+                    <member>aes-256-gcm</member>
+                  </encryption>
+                  <authentication>
+                    <member>none</member>
+                  </authentication>
+                </esp>
+                <dh-group>group20</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+            </ipsec-crypto-profiles>
+            <global-protect-app-crypto-profiles>
+              <entry name="default">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                </encryption>
+                <authentication>
+                  <member>sha1</member>
+                </authentication>
+              </entry>
+            </global-protect-app-crypto-profiles>
+          </crypto-profiles>
+          <gateway/>
+        </ike>
+        <qos>
+          <profile>
+            <entry name="default">
+              <class-bandwidth-type>
+                <mbps>
+                  <class>
+                    <entry name="class1">
+                      <priority>real-time</priority>
+                    </entry>
+                    <entry name="class2">
+                      <priority>high</priority>
+                    </entry>
+                    <entry name="class3">
+                      <priority>high</priority>
+                    </entry>
+                    <entry name="class4">
+                      <priority>medium</priority>
+                    </entry>
+                    <entry name="class5">
+                      <priority>medium</priority>
+                    </entry>
+                    <entry name="class6">
+                      <priority>low</priority>
+                    </entry>
+                    <entry name="class7">
+                      <priority>low</priority>
+                    </entry>
+                    <entry name="class8">
+                      <priority>low</priority>
+                    </entry>
+                  </class>
+                </mbps>
+              </class-bandwidth-type>
+            </entry>
+          </profile>
+        </qos>
+        <virtual-router>
+          <entry name="default">
+            <protocol>
+              <bgp>
+                <dampening-profile>
+                  <entry name="default">
+                    <cutoff>1.25</cutoff>
+                    <reuse>0.5</reuse>
+                    <max-hold-time>900</max-hold-time>
+                    <decay-half-life-reachable>300</decay-half-life-reachable>
+                    <decay-half-life-unreachable>900</decay-half-life-unreachable>
+                    <enable>yes</enable>
+                    </entry>
+                </dampening-profile>
+                <routing-options>
+                  <graceful-restart>
+                    <enable>yes</enable>
+                  </graceful-restart>
+                  <as-format>4-byte</as-format>
+                  <default-local-preference>200</default-local-preference>
+                </routing-options>%{ if bootstrap_bgp }
+                <router-id></router-id>
+                <local-as>${asn}</local-as>
+                <enable>yes</enable>
+                <peer-group>
+%{ for key,peers in neighbors ~}
+                  <entry name="${key}">
+                    <type>
+                      <ebgp>
+                        <remove-private-as>yes</remove-private-as>
+                        <import-nexthop>original</import-nexthop>
+                        <export-nexthop>resolve</export-nexthop>
+                      </ebgp>
+                    </type>
+%{ for k2,v2 in peers ~}
+                    <peer>
+                      <entry name="${k2}">
+                        <peer-address>
+                          <ip>${v2.peer_address}</ip>
+                        </peer-address>
+                        <connection-options>
+                          <incoming-bgp-connection>
+                            <remote-port>0</remote-port>
+                            <allow>yes</allow>
+                          </incoming-bgp-connection>
+                          <outgoing-bgp-connection>
+                            <local-port>0</local-port>
+                            <allow>yes</allow>
+                          </outgoing-bgp-connection>
+                          <multihop>0</multihop>
+                          <keep-alive-interval>30</keep-alive-interval>
+                          <open-delay-time>0</open-delay-time>
+                          <hold-time>90</hold-time>
+                          <idle-hold-time>15</idle-hold-time>
+                          <min-route-adv-interval>30</min-route-adv-interval>
+                        </connection-options>
+                        <subsequent-address-family-identifier>
+                          <unicast>yes</unicast>
+                          <multicast>no</multicast>
+                        </subsequent-address-family-identifier>
+                        <local-address>
+                          <ip>${v2.local_address}</ip>
+                          <interface>${v2.interface}</interface>
+                        </local-address>
+                        <bfd>
+                          <profile>Inherit-vr-global-setting</profile>
+                        </bfd>
+                        <max-prefixes>5000</max-prefixes>
+                        <enable>yes</enable>
+                        <peer-as>4211000000</peer-as>
+                        <enable-mp-bgp>no</enable-mp-bgp>
+                        <address-family-identifier>ipv4</address-family-identifier>
+                        <enable-sender-side-loop-detection>yes</enable-sender-side-loop-detection>
+                        <reflector-client>non-client</reflector-client>
+                        <peering-type>unspecified</peering-type>
+                      </entry>                    
+                    </peer>
+%{ endfor ~}%{ endfor ~}
+                </peer-group>%{ else }
+                <enable>no</enable>%{ endif }
+              </bgp>
+              <rip>
+                <enable>no</enable>
+              </rip>
+              <ospf>
+                <enable>no</enable>
+              </ospf>
+              <ospfv3>
+                <enable>no</enable>
+              </ospfv3>
+            </protocol>
+            <interface>
+%{ for interface in interfaces ~}
+                <member>${interface.ethernet}</member>
+%{ endfor ~}
+            </interface>
+            <ecmp>
+              <algorithm>
+                <ip-modulo/>
+              </algorithm>
+              <enable>yes</enable>
+              <symmetric-return>yes</symmetric-return>
+            </ecmp>
+          </entry>
+        </virtual-router>
+        <tunnel>
+          <ipsec/>
+          <global-protect-gateway/>
+          <global-protect-site-to-site/>
+        </tunnel>
+      </network>
+      <deviceconfig>
+        <system>
+          <device-telemetry>
+            <device-health-performance>no</device-health-performance>
+            <product-usage>no</product-usage>
+            <threat-prevention>no</threat-prevention>
+            <region>Americas</region>
+          </device-telemetry>
+          <type>
+            <dhcp-client>
+              <send-hostname>yes</send-hostname>
+              <send-client-id>no</send-client-id>
+              <accept-dhcp-hostname>yes</accept-dhcp-hostname>
+              <accept-dhcp-domain>no</accept-dhcp-domain>
+            </dhcp-client>
+          </type>
+          <update-server>updates.paloaltonetworks.com</update-server>
+          <update-schedule>
+            <threats>
+              <recurring>
+                <weekly>
+                  <day-of-week>wednesday</day-of-week>
+                  <at>01:02</at>
+                  <action>download-only</action>
+                </weekly>
+              </recurring>
+            </threats>
+          </update-schedule>
+          <timezone>US/Pacific</timezone>
+          <service>
+            <disable-telnet>yes</disable-telnet>
+            <disable-http>yes</disable-http>
+          </service>
+          <hostname>${ name }</hostname>
+          <route/>
+        </system>
+        <setting>
+          <config>
+            <rematch>yes</rematch>
+          </config>
+          <management>
+            <hostname-type-in-syslog>FQDN</hostname-type-in-syslog>
+          </management>
+        </setting>
+      </deviceconfig>
+      <vsys>
+        <entry name="vsys1">
+          <application/>
+          <application-group/>
+          <zone>
+            <entry name="distro-lan">
+              <network>
+                <layer3>
+                  <member>ethernet1/1</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="access-trusted-aa00">
+              <network>
+                <layer3>
+                  <member>ethernet1/2</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="access-trusted-ab00">
+              <network>
+                <layer3>
+                  <member>ethernet1/3</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="access-trusted-transit">
+              <network>
+                <layer3>
+                  <member>ethernet1/4</member>
+                </layer3>
+              </network>
+            </entry>
+          </zone>
+          <service/>
+          <service-group/>
+          <schedule/>
+          <rulebase>
+            <security>
+              <rules>
+              </rules>
+            </security>
+          </rulebase>
+          <address>
+%{ for interface in interfaces ~}
+            <entry name="${interface.ipv4_address}">
+              <ip-netmask>${interface.ipv4_address}/${interface.ipv4_prefix}</ip-netmask>
+            </entry>
+%{ endfor ~}          
+          </address>
+          <import>
+            <network>
+              <interface>
+%{ for interface in interfaces ~}
+                <member>${interface.ethernet}</member>
+%{ endfor ~}
+              </interface>
+            </network>
+          </import>
+          <global-protect>
+            <global-protect-gateway/>
+            <global-protect-portal/>
+          </global-protect>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>
