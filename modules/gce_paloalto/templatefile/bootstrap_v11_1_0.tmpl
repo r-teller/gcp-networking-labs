@@ -82,7 +82,7 @@
             <entry name="${interface.ethernet}">
               <layer3>
                 <ip>
-                  <entry name="${interface.ipv4_address}/${interface.ipv4_prefix}"/>
+                  <entry name="${interface.ipv4_address}"/>
                 </ip>
                 <lldp>
                   <enable>no</enable>
@@ -275,7 +275,7 @@
                   <as-format>4-byte</as-format>
                   <default-local-preference>200</default-local-preference>
                 </routing-options>%{ if bootstrap_bgp }
-                <router-id></router-id>
+                <router-id>${ management_address }</router-id>
                 <local-as>${asn}</local-as>
                 <enable>yes</enable>
                 <peer-group>
@@ -288,8 +288,8 @@
                         <export-nexthop>resolve</export-nexthop>
                       </ebgp>
                     </type>
-%{ for k2,v2 in peers ~}
                     <peer>
+%{ for k2,v2 in peers ~}
                       <entry name="${k2}">
                         <peer-address>
                           <ip>${v2.peer_address}</ip>
@@ -323,15 +323,20 @@
                         </bfd>
                         <max-prefixes>5000</max-prefixes>
                         <enable>yes</enable>
-                        <peer-as>4211000000</peer-as>
+                        <peer-as>${v2.peer_asn}</peer-as>
                         <enable-mp-bgp>no</enable-mp-bgp>
                         <address-family-identifier>ipv4</address-family-identifier>
                         <enable-sender-side-loop-detection>yes</enable-sender-side-loop-detection>
                         <reflector-client>non-client</reflector-client>
                         <peering-type>unspecified</peering-type>
                       </entry>                    
+%{ endfor ~}
                     </peer>
-%{ endfor ~}%{ endfor ~}
+                    <aggregated-confed-as-path>yes</aggregated-confed-as-path>
+                    <soft-reset-with-stored-info>no</soft-reset-with-stored-info>
+                    <enable>yes</enable>                    
+                  </entry>
+%{ endfor ~}
                 </peer-group>%{ else }
                 <enable>no</enable>%{ endif }
               </bgp>
@@ -447,12 +452,7 @@
           <service/>
           <service-group/>
           <schedule/>
-          <rulebase>
-            <security>
-              <rules>
-              </rules>
-            </security>
-          </rulebase>
+          <rulebase/>
           <address>
 %{ for interface in interfaces ~}
             <entry name="${interface.ipv4_address}">

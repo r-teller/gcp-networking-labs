@@ -48,15 +48,15 @@ locals {
       ethernet = (
         var.input.mgmt_interface_swap == true && tonumber(k2) != 1
         ) ? (
-        tonumber(k2) > 1
-        ? format("ethernet1/%d", tonumber(k2) - 1)
+        tonumber(k2) == 0
+        ? format("ethernet1/%d", tonumber(k2) + 1)
         : format("ethernet1/%d", tonumber(k2))
         ) : (
         var.input.mgmt_interface_swap == false && tonumber(k2) != 0
-        ? format("ethernet1/%d", tonumber(k2) - 1)
+        ? format("ethernet1/%d", tonumber(k2))
         : null
       )
-      
+
       cidr_range = [
         for subnetwork in var.config_map[v2.config_map_tag].subnetworks :
         subnetwork.ip_cidr_range if(

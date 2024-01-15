@@ -1,14 +1,5 @@
-# output "redis" {
-#   value = {
-#     server_ca_certs = base64encode(one(module.distro_lan-to-access_trusted-redis[0].cache["us-east4"].server_ca_certs).cert),
-#     host            = module.distro_lan-to-access_trusted-redis[0].cache["us-east4"].host,
-#     auth_string     = module.distro_lan-to-access_trusted-redis[0].cache["us-east4"].auth_string,
-#   }
-
-#   # sensitive = true
-# }
 module "distro_lan-to-access_trusted-redis" {
-  count  = 0
+  count  = 1
   source = "../../modules/memorystore_redis"
 
 
@@ -34,7 +25,7 @@ module "distro_lan-to-access_trusted-redis" {
 
 module "distro_lan-to-access_trusted_a-palo" {
   count      = 1
-  create_vms = false
+  create_vms = true
   source     = "../../modules/gce_paloalto"
 
   depends_on = [
@@ -61,18 +52,23 @@ module "distro_lan-to-access_trusted_a-palo" {
     }
     zones = {
       "us-east4-a" = 0
-      "us-west1-a" = 2
+      "us-west1-a" = 1
     }
 
-    # regional_redis = module.distro_lan-to-access_trusted-redis[0].cache
+    regional_redis = module.distro_lan-to-access_trusted-redis[0].cache
 
     # Can also be passed in this way
     # regional_redis = {
     #   us-east4 : module.distro_lan-to-access_trusted-redis[0].cache["us-east4"]
     # }
-
-    bootstrap_enabled   = true
-    bootstrap_bgp       = true
+    bootstrap = {
+      enabled      = true
+      bgp_enabled  = true
+      output_gcs   = true
+      output_local = true
+    }
+    # bootstrap_enabled   = true
+    # bootstrap_bgp       = true
     mgmt_interface_swap = true
     plugin_op_commands = {
       set-sess-ress = "True"
