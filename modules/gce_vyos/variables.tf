@@ -1,4 +1,7 @@
-
+variable "bucket_name" {
+  type    = string
+  default = null
+}
 variable "default_asn" {
   type    = number
   default = 65534
@@ -43,10 +46,16 @@ variable "image" {
 
 variable "input" {
   type = object({
-    name_prefix     = string
-    shared_asn      = optional(number, null)
-    regional_asn    = optional(map(number))
-    machine_type    = optional(string, "n2-standard-4")
+    name_prefix  = string
+    shared_asn   = optional(number, null)
+    regional_asn = optional(map(number))
+    machine_type = optional(string, "n2-standard-4")
+    bootstrap = optional(object({
+      enabled      = optional(bool, false)
+      bgp_enabled  = optional(bool, false)
+      output_local = optional(bool, false)
+      output_gcs   = optional(bool, false)
+    }))
     zones           = map(number)
     service_account = string
     interfaces = map(object({

@@ -48,7 +48,7 @@ module "ha_vpn_peering-access_trusted" {
         hub   = "access_trusted_transit",
         spoke = "shared_aa00_nonprod",
       }
-      regions      = ["us-east4"]
+      regions      = ["us-east4", "us-west1"]
       use_ncc_hub  = true
       tunnel_count = 1
     },

@@ -216,6 +216,8 @@ locals {
 
     access_trusted_aa00 = {
       prefix = "access-trusted-aa00"
+      
+      cloud_nat_all_subnets = true
       ## if regional ASN exists it will be preferred over the shared ASN
       shared_asn = 64516
       regional_asn = {
@@ -266,6 +268,8 @@ locals {
 
     access_trusted_ab00 = {
       prefix = "access-trusted-ab00"
+
+      cloud_nat_all_subnets = true
       ## if regional ASN exists it will be preferred over the shared ASN
       shared_asn = 64517
       regional_asn = {

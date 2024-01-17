@@ -10,8 +10,13 @@ module "distro_lan-to-access_trusted-redis" {
   input = {
     name_prefix = "distro-to-access"
     regions = {
-      us-west1 : {
+      us-east4 : {
         ip_cidr_range = "192.168.255.128/28"
+        size          = 1
+        version       = "REDIS_7_0"
+      }
+      us-west1 : {
+        ip_cidr_range = "192.168.255.144/28"
         size          = 1
         version       = "REDIS_7_0"
       }
@@ -51,8 +56,8 @@ module "distro_lan-to-access_trusted_a-palo" {
       europe-west3 : 4234100001,
     }
     zones = {
-      "us-east4-a" = 0
-      "us-west1-a" = 1
+      "us-east4-a" = 2
+      "us-west1-a" = 2
     }
 
     regional_redis = module.distro_lan-to-access_trusted-redis[0].cache
@@ -103,7 +108,7 @@ module "distro_lan-to-access_trusted_a-palo" {
       4 = {
         config_map_tag = "access_trusted_transit"
         subnetwork_tag = "network_appliance"
-        use_ncc_hub    = false
+        use_ncc_hub    = true
       }
     }
   }

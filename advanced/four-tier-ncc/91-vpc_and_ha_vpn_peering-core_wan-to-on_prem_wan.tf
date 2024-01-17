@@ -23,7 +23,7 @@ module "ha_vpn_peering-core_wan" {
   project_id = var.project_id
   input_list = [
     {
-      regions     = ["us-east4"]
+      regions     = ["us-east4", "us-west1"]
       use_ncc_hub = true
       networks = {
         hub   = "core_wan",

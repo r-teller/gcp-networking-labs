@@ -1,11 +1,14 @@
 module "core_wan-to-distro_lan" {
-  count  = 0
+  count = 1
+  # create_vms = true
   source = "../../modules/gce_vyos"
 
   depends_on = [
     module.network-core_wan,
     module.network-distro_lan,
   ]
+
+  bucket_name = google_storage_bucket.bucket.name
 
   project_id = var.project_id
   config_map = local._networks
@@ -23,8 +26,15 @@ module "core_wan-to-distro_lan" {
     }
 
     zones = {
-      "us-east4-a" = 1
-      "us-west1-a" = 1
+      "us-east4-a" = 2
+      "us-west1-a" = 2
+    }
+
+    bootstrap = {
+      enabled      = true
+      bgp_enabled  = true
+      output_gcs   = true
+      output_local = true
     }
 
     interfaces = {

@@ -10,7 +10,7 @@ locals {
     networks     = ["access_trusted_aa00", "access_trusted_ab00"]
     machine_type = "e2-micro"
     zones = {
-      "us-east4-a" = 0
+      "us-east4-a" = 1
       "us-west1-a" = 1
     }
   }

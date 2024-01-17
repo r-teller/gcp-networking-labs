@@ -54,7 +54,6 @@ locals {
       )
 
       network          = v2.config_map_tag
-      network          = v2.config_map_tag
       use_ncc_hub      = v2.use_ncc_hub
       external_enabled = v2.external_enabled
 
