@@ -57,6 +57,7 @@ variable "input" {
       output_gcs   = optional(bool, false)
     }))
     zones           = map(number)
+    network_tags        = optional(list(string), [])
     service_account = string
     interfaces = map(object({
       config_map_tag   = string

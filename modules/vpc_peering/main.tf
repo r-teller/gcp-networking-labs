@@ -20,7 +20,7 @@ resource "google_compute_network_peering" "hub-to-spoke" {
   network                             = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", var.config_map[each.value.hub].prefix, local.random_id.hex))
   peer_network                        = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", var.config_map[each.value.spoke].prefix, local.random_id.hex))
   export_custom_routes                = true
-  import_custom_routes                = false
+  import_custom_routes                = true
   export_subnet_routes_with_public_ip = false
   import_subnet_routes_with_public_ip = false
 
@@ -39,7 +39,7 @@ resource "google_compute_network_peering" "spoke-to-hub" {
   )
   network                             = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", var.config_map[each.value.spoke].prefix, local.random_id.hex))
   peer_network                        = format("projects/%s/global/networks/%s", var.project_id, format("%s-%s", var.config_map[each.value.hub].prefix, local.random_id.hex))
-  export_custom_routes                = false
+  export_custom_routes                = true
   import_custom_routes                = true
   export_subnet_routes_with_public_ip = false
   import_subnet_routes_with_public_ip = false

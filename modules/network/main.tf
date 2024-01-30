@@ -66,17 +66,56 @@ resource "google_dns_response_policy_rule" "response_policy-cname" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall
 resource "google_compute_firewall" "firewall-allow_all" {
+  count   = local.config_map["firewall_rules"].allow_all ? 1 : 0
   project = var.project_id
 
   name    = format("%s-%s-allow-all", local.config_map["prefix"], local.random_id.hex)
   network = google_compute_network.network.self_link
 
-  source_ranges      = ["0.0.0.0/0"]
+  source_ranges = [
+    "0.0.0.0/0",
+  ]
   destination_ranges = []
   allow {
     protocol = "all"
   }
 }
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall
+resource "google_compute_firewall" "firewall-rfc1918" {
+  count   = local.config_map["firewall_rules"].allow_rfc1918 ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allow-rfc1918", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges = [
+    "192.168.0.0/16",
+    "172.16.0.0/12",
+    "10.0.0.0/8",
+  ]
+  destination_ranges = []
+  allow {
+    protocol = "all"
+  }
+}
+
+resource "google_compute_firewall" "firewall-iap" {
+  count   = local.config_map["firewall_rules"].allow_iap ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allow-iap", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges = [
+    "35.235.240.0/20",
+  ]
+  destination_ranges = []
+  allow {
+    protocol = "all"
+  }
+}
+
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route
 resource "google_compute_route" "route-iap" {
@@ -92,7 +131,7 @@ resource "google_compute_route" "route-iap" {
 resource "google_compute_route" "route-private" {
   project = var.project_id
 
-  name             = format("%s-%s-private", local.config_map["prefix"], local.random_id.hex)
+  name             = format("%s-%s-private-apis", local.config_map["prefix"], local.random_id.hex)
   network          = google_compute_network.network.self_link
   dest_range       = "199.36.153.8/30"
   next_hop_gateway = "default-internet-gateway"
@@ -105,6 +144,7 @@ resource "google_compute_route" "route-default" {
   network          = google_compute_network.network.self_link
   tags             = [format("%s-%s-default", local.config_map["prefix"], local.random_id.hex)]
   dest_range       = "0.0.0.0/0"
+  priority         = 1000
   next_hop_gateway = "default-internet-gateway"
 }
 
@@ -120,6 +160,14 @@ resource "google_compute_subnetwork" "subnetwork" {
   private_ip_google_access = true
   ip_cidr_range            = each.value.ip_cidr_range
   region                   = each.value.region
+
+  dynamic "secondary_ip_range" {
+    for_each = try(toset(each.value.secondary_ip_ranges), [])
+    content {
+      range_name    = format("%s-%s-%s", local.config_map["prefix"], replace(secondary_ip_range.value, "//|\\./", "-"), local.random_id.hex)
+      ip_cidr_range = secondary_ip_range.value
+    }
+  }
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router

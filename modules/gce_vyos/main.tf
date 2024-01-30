@@ -50,8 +50,10 @@ resource "google_compute_instance" "instances" {
     mode = "READ_WRITE"
   }
 
-  can_ip_forward            = true
+  tags = var.input.network_tags
+
   deletion_protection       = false
+  can_ip_forward            = true
   enable_display            = false
   allow_stopping_for_update = true
 
@@ -70,6 +72,12 @@ resource "google_compute_instance" "instances" {
       network_ip         = google_compute_address.internal_addresses[network_interface.key].address
       subnetwork         = format("%s-%s", network_interface.value.subnetwork, local.random_id.hex)
       subnetwork_project = var.project_id
+      dynamic "access_config" {
+        for_each = network_interface.value.external_enabled ? [1] : []
+        content {
+          nat_ip = google_compute_address.external_addresses[network_interface.key].address
+        }
+      }
     }
   }
 

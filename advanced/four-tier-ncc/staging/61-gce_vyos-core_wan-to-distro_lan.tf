@@ -26,8 +26,8 @@ module "core_wan-to-distro_lan" {
     }
 
     zones = {
-      "us-east4-a" = 2
-      "us-west1-a" = 2
+      "us-east4-a" = 1
+      "us-west1-a" = 0
     }
 
     bootstrap = {

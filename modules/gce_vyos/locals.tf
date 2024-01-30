@@ -33,8 +33,6 @@ locals {
     }
   ]...)
 
-
-  #   bucket_object = format("core_wan-to-distro_lan-vyos-%s.conf", local._regions[v1.region])
   map = { for k1, v1 in local._map : k1 => merge(v1, {
     subnetworks = { for k2, v2 in var.input.interfaces : format("%s-%s", k1, k2) => {
       nic = format("eth%d", k2)
@@ -70,8 +68,6 @@ locals {
           "//|\\./", "-"
         )
       )
-      }
-    }
-    })
-  }
+    } }
+  }) }
 }

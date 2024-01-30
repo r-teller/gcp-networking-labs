@@ -188,6 +188,11 @@ locals {
         asia-southeast1 : 4222000001,
         europe-west3 : 4232000001,
       }
+      firewall_rules = {
+        allow_all     = false
+        allow_rfc1918 = true
+        allow_iap     = true
+      }
       advertise_local_subnets = false
       subnetworks = [
         {
@@ -216,7 +221,7 @@ locals {
 
     access_trusted_aa00 = {
       prefix = "access-trusted-aa00"
-      
+
       cloud_nat_all_subnets = true
       ## if regional ASN exists it will be preferred over the shared ASN
       shared_asn = 64516
@@ -229,7 +234,8 @@ locals {
       advertise_local_subnets = true
       summary_ip_ranges = {
         "us-east4" : [
-          "10.0.0.0/16"
+          "10.0.0.0/16",
+          # "10.0.96.0/22",
         ],
         "us-west1" : [
           "10.32.0.0/16"
@@ -281,7 +287,8 @@ locals {
       advertise_local_subnets = true
       summary_ip_ranges = {
         "us-east4" : [
-          "10.1.0.0/16"
+          "10.1.0.0/16",
+          "10.1.0.0/22",
         ],
         "us-west1" : [
           "10.33.0.0/16"
@@ -328,10 +335,11 @@ locals {
         europe-west3 : 4233000000,
       }
       advertise_local_subnets = false
-      summary_ip_ranges = {
-        "us-east4" : ["10.0.96.0/22"]
-        "us-west1" : ["10.32.96.0/22"]
-      }
+      cloud_nat_all_subnets   = true
+      # summary_ip_ranges = {
+      #   "us-east4" : ["10.0.96.0/22"]
+      #   "us-west1" : ["10.32.96.0/22"]
+      # }
       private_service_ranges = [
         {
           region        = "us-east4",
@@ -342,14 +350,16 @@ locals {
         {
           region = "us-east4",
           ip_cidr_range : "10.0.96.0/27",
+          tags = ["network_appliance"],
           secondary_ip_ranges : [
-            "100.64.96.0/22",
+            "11.0.0.0/8",
             "10.0.96.32/27",
           ],
         },
         {
           region = "us-west1",
           ip_cidr_range : "10.32.96.0/27",
+          tags = ["network_appliance"],
         }
       ]
     }
@@ -364,10 +374,10 @@ locals {
         europe-west3 : 4233000001,
       }
       advertise_local_subnets = false
-      summary_ip_ranges = {
-        "us-east4" : ["10.0.0.0/21"],
-        "us-west1" : ["10.32.0.0/21"],
-      }
+      # summary_ip_ranges = {
+      #   "us-east4" : ["10.0.0.0/21"],
+      #   "us-west1" : ["10.32.0.0/21"],
+      # }
       private_service_ranges = [
         {
           region        = "us-east4",
@@ -382,7 +392,9 @@ locals {
         {
           region = "us-east4",
           ip_cidr_range : "10.0.0.0/27",
+          tags = ["network_appliance"],
           secondary_ip_ranges : [
+            "11.0.0.0/8",
             "100.64.0.0/21",
             "10.0.0.64/27",
           ],
@@ -390,10 +402,10 @@ locals {
         {
           region = "us-west1",
           ip_cidr_range : "10.32.0.0/27",
+          tags = ["network_appliance"],
         }
       ]
     }
-
 
     shared_ab00_nonprod = {
       prefix = "shared-ab00-nonprod"
@@ -404,11 +416,14 @@ locals {
         asia-southeast1 : 4223000011,
         europe-west3 : 4233000011,
       }
+      cloud_nat_all_subnets   = true
       advertise_local_subnets = false
-      summary_ip_ranges = {
-        "us-east4" : ["10.1.0.0/21"],
-        "us-west1" : ["10.33.0.0/21"],
-      }
+      # summary_ip_ranges = {
+      #   "us-east4" : [
+      #     "10.1.0.0/21"
+      #   ],
+      #   "us-west1" : ["10.33.0.0/21"],
+      # }
       private_service_ranges = [
         {
           region        = "us-east4",
@@ -423,10 +438,12 @@ locals {
         {
           region = "us-east4",
           ip_cidr_range : "10.1.0.0/27",
+          tags = ["network_appliance"],
         },
         {
           region = "us-west1",
           ip_cidr_range : "10.33.0.0/27",
+          tags = ["network_appliance"],
         }
       ]
     }

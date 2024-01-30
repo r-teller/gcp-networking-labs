@@ -7,11 +7,17 @@ resource "null_resource" "echo" {
 
 locals {
   echo = {
-    networks     = ["access_trusted_aa00", "access_trusted_ab00"]
+    networks = [
+      "access_trusted_aa00",
+      "access_trusted_ab00",
+      "shared_aa00_prod",
+      "shared_aa00_nonprod",
+      "shared_ab00_nonprod",
+    ]
     machine_type = "e2-micro"
     zones = {
       "us-east4-a" = 1
-      "us-west1-a" = 1
+      "us-west1-a" = 0
     }
   }
 

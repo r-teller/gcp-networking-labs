@@ -1,5 +1,5 @@
 module "distro_lan-to-access_trusted-redis" {
-  count  = 1
+  count  = 0
   source = "../../modules/memorystore_redis"
 
 
@@ -60,7 +60,7 @@ module "distro_lan-to-access_trusted_a-palo" {
       "us-west1-a" = 2
     }
 
-    regional_redis = module.distro_lan-to-access_trusted-redis[0].cache
+    regional_redis = try(module.distro_lan-to-access_trusted-redis[0].cache, null)
 
     # Can also be passed in this way
     # regional_redis = {

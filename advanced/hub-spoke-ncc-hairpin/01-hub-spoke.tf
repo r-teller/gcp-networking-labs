@@ -1,36 +1,36 @@
-module "network-shared_aa00_prod" {
+module "network-hub_shared_aa00" {
   source = "../../modules/network"
 
   project_id = var.project_id
   config_map = local._networks
   input = {
-    config_map_tag = "shared_aa00_prod"
+    config_map_tag = "hub_shared_aa00"
+    routing_mode   = "GLOBAL"
+    create_ncc_hub = true
+  }
+  random_id = random_id.id
+}
+
+module "network-spoke_nonprod_aa00" {
+  source = "../../modules/network"
+
+  project_id = var.project_id
+  config_map = local._networks
+  input = {
+    config_map_tag = "spoke_nonprod_aa00"
     routing_mode   = "REGIONAL"
     create_ncc_hub = true
   }
   random_id = random_id.id
 }
 
-module "network-shared_aa00_nonprod" {
+module "network-spoke_prod_aa00" {
   source = "../../modules/network"
 
   project_id = var.project_id
   config_map = local._networks
   input = {
-    config_map_tag = "shared_aa00_nonprod"
-    routing_mode   = "REGIONAL"
-    create_ncc_hub = true
-  }
-  random_id = random_id.id
-}
-
-module "network-shared_ab00_nonprod" {
-  source = "../../modules/network"
-
-  project_id = var.project_id
-  config_map = local._networks
-  input = {
-    config_map_tag = "shared_ab00_nonprod"
+    config_map_tag = "spoke_prod_aa00"
     routing_mode   = "REGIONAL"
     create_ncc_hub = true
   }

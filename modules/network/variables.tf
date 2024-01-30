@@ -20,7 +20,12 @@ variable "config_map" {
       regional_asn            = optional(map(number))
       advertise_local_subnets = optional(bool, false)
       cloud_nat_all_subnets   = optional(bool, false)
-      summary_ip_ranges       = optional(map(list(string)))
+      firewall_rules = optional(object({
+        allow_all     = optional(bool, true)
+        allow_rfc1918 = optional(bool, false)
+        allow_iap     = optional(bool, false)
+      }), {})
+      summary_ip_ranges = optional(map(list(string)))
       subnetworks = optional(list(object({
         region              = string
         ip_cidr_range       = string
