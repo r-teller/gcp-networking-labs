@@ -74,7 +74,7 @@ resource "google_compute_instance" "instances" {
   metadata = {
     mgmt-interface-swap                  = (var.input.bootstrap.enabled && var.input.bootstrap.output_gcs) ? null : (var.input.mgmt_interface_swap ? "enable" : null)
     vmseries-bootstrap-gce-storagebucket = (var.input.bootstrap.enabled && var.input.bootstrap.output_gcs) ? format("%s/%s", var.bucket_name, each.value.name) : null
-    serial-port-enable                   = true
+    serial-port-enable                   = var.input.enable_serial_console ? "TRUE" : null
     ssh-keys                             = var.input.ssh_keys != null ? "admin:${var.input.ssh_keys}" : "admin:${tls_private_key.default[0].public_key_openssh}"
   }
 

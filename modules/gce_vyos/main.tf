@@ -60,7 +60,7 @@ resource "google_compute_instance" "instances" {
   machine_type = each.value.machine_type
 
   metadata = {
-    serial-port-enable = "TRUE"
+    serial-port-enable = var.input.enable_serial_console ? "TRUE" : null
     # pubsub-subscription     = each.value.name
     # configuration_bucket_id = google_storage_bucket.bucket.name
     # configuration_object_id = each.value.bucket_object

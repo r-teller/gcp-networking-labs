@@ -59,6 +59,7 @@ variable "image" {
 variable "input" {
   type = object({
     name_prefix  = string
+    enable_serial_console = optional(bool, false)
     shared_asn   = optional(number, null)
     regional_asn = optional(map(number))
     machine_type = optional(string, "n2-standard-8")

@@ -46,10 +46,11 @@ variable "image" {
 
 variable "input" {
   type = object({
-    name_prefix  = string
-    shared_asn   = optional(number, null)
-    regional_asn = optional(map(number))
-    machine_type = optional(string, "n2-standard-4")
+    name_prefix           = string
+    enable_serial_console = optional(bool, false)
+    shared_asn            = optional(number, null)
+    regional_asn          = optional(map(number))
+    machine_type          = optional(string, "n2-standard-4")
     bootstrap = optional(object({
       enabled      = optional(bool, false)
       bgp_enabled  = optional(bool, false)
@@ -57,7 +58,7 @@ variable "input" {
       output_gcs   = optional(bool, false)
     }))
     zones           = map(number)
-    network_tags        = optional(list(string), [])
+    network_tags    = optional(list(string), [])
     service_account = string
     interfaces = map(object({
       config_map_tag   = string

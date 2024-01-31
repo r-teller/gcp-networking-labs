@@ -13,10 +13,10 @@ module "gce_vyos-hub_shared_aa00" {
   config_map = local._networks
   random_id  = random_id.id
   input = {
-    name_prefix     = "hub-shared-aa00"
-    machine_type    = "n2d-standard-2"
-    service_account = google_service_account.service_account.email
-
+    name_prefix           = "hub-shared-aa00"
+    machine_type          = "n2d-standard-2"
+    service_account       = google_service_account.service_account.email
+    enable_serial_console = true
     regional_asn = {
       us-east4 : 4204100001,
       us-west1 : 4214100001,
