@@ -60,10 +60,9 @@ resource "google_compute_instance" "instances" {
   machine_type = each.value.machine_type
 
   metadata = {
-    serial-port-enable = var.input.enable_serial_console ? "TRUE" : null
-    # pubsub-subscription     = each.value.name
-    # configuration_bucket_id = google_storage_bucket.bucket.name
-    # configuration_object_id = each.value.bucket_object
+    serial-port-enable      = var.input.enable_serial_console ? "TRUE" : null
+    configuration_bucket_id = (var.input.bootstrap.enabled && var.input.bootstrap.output_gcs) ? google_storage_bucket_object.config_boot[each.key].bucket : null
+    configuration_object_id = (var.input.bootstrap.enabled && var.input.bootstrap.output_gcs) ? google_storage_bucket_object.config_boot[each.key].name : null
   }
 
   dynamic "network_interface" {

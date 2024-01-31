@@ -34,6 +34,9 @@ module "gce_vyos-hub_shared_aa00" {
       output_gcs   = true
       output_local = true
     }
+    network_tags = [
+      format("%s-%s-default", local._networks["hub_shared_aa00"]["prefix"], random_id.id.hex)
+    ]
     interfaces = {
       0 = {
         config_map_tag = "hub_shared_aa00"

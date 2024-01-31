@@ -8,7 +8,7 @@ interfaces {
     }
 }
 
-protocols {
+protocols {%{ if bootstrap_bgp }
     bgp ${ asn } {
         timers {
             holdtime 60
@@ -28,7 +28,7 @@ protocols {
             remote-as ${neighbor.peer_asn}
         }
 %{ endfor ~}
-    }
+    }%{ endif }
 }
 
 service {

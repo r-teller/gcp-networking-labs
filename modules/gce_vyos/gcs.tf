@@ -7,6 +7,7 @@ resource "local_file" "config_boot" {
     {
       "name" : each.value.name,
       "interfaces" : each.value.subnetworks,
+      "bootstrap_bgp" : var.input.bootstrap.bgp_enabled,
       "asn" : try(
         var.input.regional_asn[each.value.region],
         var.input.shared_asn,
@@ -43,6 +44,7 @@ resource "google_storage_bucket_object" "config_boot" {
     {
       "name" : each.value.name,
       "interfaces" : each.value.subnetworks,
+      "bootstrap_bgp" : var.input.bootstrap.bgp_enabled,
       "asn" : try(
         var.input.regional_asn[each.value.region],
         var.input.shared_asn,
