@@ -45,9 +45,11 @@ variable "random_id" {
 
 variable "input" {
   type = object({
-    routing_mode   = string,
-    config_map_tag = string,
-    create_ncc_hub = optional(bool, false),
+    routing_mode         = string,
+    enable_private_googleapis   = optional(bool, true),  ## <-- only one of these should be enabled, either private or restricted
+    enable_restriced_googleapis = optional(bool, false), ## <-- only one of these should be enabled, either private or restricted
+    config_map_tag       = string,
+    create_ncc_hub       = optional(bool, false),
   })
 }
 

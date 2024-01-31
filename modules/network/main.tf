@@ -15,6 +15,10 @@ resource "google_compute_network" "network" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy
 resource "google_dns_response_policy" "response_policy" {
+  count = (
+    var.input.enable_private_googleapis ||
+    var.input.enable_restriced_googleapis
+  ) ? 1 : 0
   project = var.project_id
 
   response_policy_name = format("%s-%s", local.config_map["prefix"], local.random_id.hex)
@@ -25,10 +29,12 @@ resource "google_dns_response_policy" "response_policy" {
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy_rule
-resource "google_dns_response_policy_rule" "response_policy-a" {
+resource "google_dns_response_policy_rule" "response_policy-a-private" {
+  count = var.input.enable_private_googleapis ? 1 : 0
+
   project = var.project_id
 
-  response_policy = google_dns_response_policy.response_policy.response_policy_name
+  response_policy = google_dns_response_policy.response_policy[0].response_policy_name
   rule_name       = "private-googleapis-com"
   dns_name        = "private.googleapis.com."
 
@@ -47,10 +53,37 @@ resource "google_dns_response_policy_rule" "response_policy-a" {
   }
 }
 
-resource "google_dns_response_policy_rule" "response_policy-cname" {
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_response_policy_rule
+resource "google_dns_response_policy_rule" "response_policy-a-restricted" {
+  count = var.input.enable_restriced_googleapis ? 1 : 0
+
   project = var.project_id
 
-  response_policy = google_dns_response_policy.response_policy.response_policy_name
+  response_policy = google_dns_response_policy.response_policy[0].response_policy_name
+  rule_name       = "restricted-googleapis-com"
+  dns_name        = "restricted.googleapis.com."
+
+  local_data {
+    local_datas {
+      name = "restricted.googleapis.com."
+      type = "A"
+      ttl  = 300
+      rrdatas = [
+        "199.36.153.4",
+        "199.36.153.5",
+        "199.36.153.6",
+        "199.36.153.7"
+      ]
+    }
+  }
+}
+
+resource "google_dns_response_policy_rule" "response_policy-cname" {
+  count = (var.input.enable_private_googleapis || var.input.enable_restriced_googleapis) ? 1 : 0
+
+  project = var.project_id
+
+  response_policy = google_dns_response_policy.response_policy[0].response_policy_name
   rule_name       = "star-googleapis-com"
   dns_name        = "*.googleapis.com."
 
@@ -59,7 +92,7 @@ resource "google_dns_response_policy_rule" "response_policy-cname" {
       name    = "*.googleapis.com."
       type    = "CNAME"
       ttl     = 300
-      rrdatas = ["private.googleapis.com."]
+      rrdatas = var.input.enable_restriced_googleapis ? ["restricted.googleapis.com"] : var.input.enable_private_googleapis ? ["private.googleapis.com"] : null
     }
   }
 }
