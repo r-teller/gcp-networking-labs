@@ -92,7 +92,7 @@ resource "google_dns_response_policy_rule" "response_policy-cname" {
       name    = "*.googleapis.com."
       type    = "CNAME"
       ttl     = 300
-      rrdatas = var.input.enable_restriced_googleapis ? ["restricted.googleapis.com"] : var.input.enable_private_googleapis ? ["private.googleapis.com"] : null
+      rrdatas = var.input.enable_restriced_googleapis ? ["restricted.googleapis.com."] : var.input.enable_private_googleapis ? ["private.googleapis.com."] : null
     }
   }
 }
