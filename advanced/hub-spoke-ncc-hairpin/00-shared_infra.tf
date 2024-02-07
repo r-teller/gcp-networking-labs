@@ -29,6 +29,8 @@ resource "google_storage_bucket" "bucket" {
   name          = format("%s-%s", "advanced-network-vyos-conf", random_id.id.hex)
   location      = "us-central1"
   force_destroy = true
+  
+  uniform_bucket_level_access = false // uniform bucket access has to be disabled for this bucket or Palo VM will not be able to bootstrap
 }
 
 ##################################

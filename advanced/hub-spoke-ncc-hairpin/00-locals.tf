@@ -28,6 +28,9 @@ locals {
         asia-southeast1 : 4222000002,
         europe-west3 : 4232000002,
       }
+      firewall_rules = {
+        # allowed_ssh_sources = ["1.1.1.1"]
+      }
       subnetworks = [
         {
 

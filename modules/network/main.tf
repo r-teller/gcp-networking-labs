@@ -115,7 +115,7 @@ resource "google_compute_firewall" "firewall-allow_all" {
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall
-resource "google_compute_firewall" "firewall-rfc1918" {
+resource "google_compute_firewall" "firewall-allow_rfc1918" {
   count   = local.config_map["firewall_rules"].allow_rfc1918 ? 1 : 0
   project = var.project_id
 
@@ -133,7 +133,24 @@ resource "google_compute_firewall" "firewall-rfc1918" {
   }
 }
 
-resource "google_compute_firewall" "firewall-iap" {
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall
+resource "google_compute_firewall" "firewall-allow_rfc6598" {
+  count   = local.config_map["firewall_rules"].allow_rfc6598 ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allow-rfc6598", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges = [
+    "100.64.0.0/10",
+  ]
+  destination_ranges = []
+  allow {
+    protocol = "all"
+  }
+}
+
+resource "google_compute_firewall" "firewall-allow_iap" {
   count   = local.config_map["firewall_rules"].allow_iap ? 1 : 0
   project = var.project_id
 
@@ -149,6 +166,39 @@ resource "google_compute_firewall" "firewall-iap" {
   }
 }
 
+resource "google_compute_firewall" "firewall-allow_gfe" {
+  count   = local.config_map["firewall_rules"].allow_gfe ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allow-gfe", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges = [
+    "35.191.0.0/16",
+    "130.211.0.0/22",
+    "34.96.0.0/20",
+    "34.127.192.0/18",
+  ]
+  destination_ranges = []
+  allow {
+    protocol = "all"
+  }
+}
+
+
+resource "google_compute_firewall" "firewall-allowed_ssh_sources" {
+  count   = length(local.config_map["firewall_rules"].allowed_ssh_sources) > 0 ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allowed-ssh-sources", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges      = local.config_map["firewall_rules"].allowed_ssh_sources
+  destination_ranges = []
+  allow {
+    protocol = "all"
+  }
+}
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route
 resource "google_compute_route" "route-iap" {
