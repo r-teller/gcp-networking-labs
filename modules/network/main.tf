@@ -196,7 +196,8 @@ resource "google_compute_firewall" "firewall-allowed_ssh_sources" {
   source_ranges      = local.config_map["firewall_rules"].allowed_ssh_sources
   destination_ranges = []
   allow {
-    protocol = "all"
+    protocol = "tcp"
+    ports    = [22]
   }
 }
 
