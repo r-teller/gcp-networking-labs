@@ -15,6 +15,31 @@ locals {
   _default_asn = 65534
 
   _networks = {
+    mgmt : {
+      prefix : "ha-mgmt",
+      cloud_nat_all_subnets = true
+      firewall_rules = {
+        allowed_ssh_sources = ["0.0.0.0/0"]
+      }
+      private_service_ranges = [
+        # {
+        #   region        = "us-east4",
+        #   ip_cidr_range = "192.168.128.0/28"
+        # },
+      ]
+      subnetworks : [
+        {
+          region : "us-east4",
+          ip_cidr_range : "192.168.255.0/27",
+          tags = ["mgmt"],
+        },
+        {
+          region : "us-west1",
+          ip_cidr_range : "192.168.255.32/27",
+          tags = ["mgmt"],
+        }
+      ]
+    }
     hub_shared_aa00 = {
       prefix = "hub-shared-aa00"
 
@@ -36,7 +61,7 @@ locals {
 
           region = "us-east4",
           ip_cidr_range : "172.24.0.0/24",
-          tags = ["network_appliance", "cloud_nat"],
+          tags = ["network_appliance"],
           secondary_ip_ranges : [],
         },
         {

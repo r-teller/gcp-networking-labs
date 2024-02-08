@@ -185,7 +185,6 @@ resource "google_compute_firewall" "firewall-allow_gfe" {
   }
 }
 
-
 resource "google_compute_firewall" "firewall-allowed_ssh_sources" {
   count   = length(local.config_map["firewall_rules"].allowed_ssh_sources) > 0 ? 1 : 0
   project = var.project_id
@@ -200,6 +199,23 @@ resource "google_compute_firewall" "firewall-allowed_ssh_sources" {
     ports    = [22]
   }
 }
+
+
+resource "google_compute_firewall" "firewall-allowed_https_sources" {
+  count   = length(local.config_map["firewall_rules"].allowed_https_sources) > 0 ? 1 : 0
+  project = var.project_id
+
+  name    = format("%s-%s-allowed-https-sources", local.config_map["prefix"], local.random_id.hex)
+  network = google_compute_network.network.self_link
+
+  source_ranges      = local.config_map["firewall_rules"].allowed_ssh_sources
+  destination_ranges = []
+  allow {
+    protocol = "tcp"
+    ports    = [443]
+  }
+}
+
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route
 resource "google_compute_route" "route-iap" {
