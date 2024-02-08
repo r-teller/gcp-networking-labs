@@ -1,13 +1,3 @@
-# resource "local_file" "folder" {
-#   for_each = { for k, v in local.map : k => v if(var.input.bootstrap.enabled && var.input.bootstrap.output_local) }
-#   filename = format("./local_config/%s", each.value.name)
-#   source 
-#   depends_on = [
-#     local_file.bootstrap_xml,
-#     local_file.init_cfg,
-#   ]
-# }
-
 resource "local_file" "init_cfg" {
   for_each = { for k, v in local.map : k => v if(var.input.bootstrap.enabled && var.input.bootstrap.output_local) }
 
@@ -20,8 +10,6 @@ resource "local_file" "init_cfg" {
       "plugin-op-commands" : var.input.plugin_op_commands != null ? join(",", [for k, v in var.input.plugin_op_commands : format("%s:%s", k, v)]) : ""
     }
   )
-
-  #   depends_on = [local_file.folder]
 }
 
 resource "google_storage_bucket_object" "init_cfg" {

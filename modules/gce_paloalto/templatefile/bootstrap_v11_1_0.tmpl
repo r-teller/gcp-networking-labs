@@ -266,7 +266,7 @@
                     <decay-half-life-reachable>300</decay-half-life-reachable>
                     <decay-half-life-unreachable>900</decay-half-life-unreachable>
                     <enable>yes</enable>
-                    </entry>
+                  </entry>
                 </dampening-profile>
                 <routing-options>
                   <graceful-restart>
@@ -329,15 +329,16 @@
                         <enable-sender-side-loop-detection>yes</enable-sender-side-loop-detection>
                         <reflector-client>non-client</reflector-client>
                         <peering-type>unspecified</peering-type>
-                      </entry>                    
+                      </entry>
 %{ endfor ~}
                     </peer>
                     <aggregated-confed-as-path>yes</aggregated-confed-as-path>
                     <soft-reset-with-stored-info>no</soft-reset-with-stored-info>
-                    <enable>yes</enable>                    
+                    <enable>yes</enable>
                   </entry>
 %{ endfor ~}
-                </peer-group>%{ else }
+                </peer-group>
+                <install-route>yes</install-route>%{ else }
                 <enable>no</enable>%{ endif }
               </bgp>
               <rip>
@@ -381,9 +382,9 @@
           <type>
             <dhcp-client>
               <send-hostname>yes</send-hostname>
-              <send-client-id>no</send-client-id>
+              <send-client-id>yes</send-client-id>
               <accept-dhcp-hostname>yes</accept-dhcp-hostname>
-              <accept-dhcp-domain>no</accept-dhcp-domain>
+              <accept-dhcp-domain>yes</accept-dhcp-domain>
             </dhcp-client>
           </type>
           <update-server>updates.paloaltonetworks.com</update-server>
@@ -420,34 +421,15 @@
           <application/>
           <application-group/>
           <zone>
-            <entry name="distro-lan">
+%{ for interface in interfaces ~}          
+            <entry name="${interface.network_prefix}">
               <network>
                 <layer3>
-                  <member>ethernet1/1</member>
+                  <member>${interface.ethernet}</member>
                 </layer3>
               </network>
             </entry>
-            <entry name="access-trusted-aa00">
-              <network>
-                <layer3>
-                  <member>ethernet1/2</member>
-                </layer3>
-              </network>
-            </entry>
-            <entry name="access-trusted-ab00">
-              <network>
-                <layer3>
-                  <member>ethernet1/3</member>
-                </layer3>
-              </network>
-            </entry>
-            <entry name="access-trusted-transit">
-              <network>
-                <layer3>
-                  <member>ethernet1/4</member>
-                </layer3>
-              </network>
-            </entry>
+%{ endfor ~}
           </zone>
           <service/>
           <service-group/>

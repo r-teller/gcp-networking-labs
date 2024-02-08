@@ -11,8 +11,7 @@ op-command-modes=${op-command-modes}
 plugin-op-commands=${plugin-op-commands}%{if null != redis-config }
 redis-endpoint=${redis-config.host}:${redis-config.port}
 redis-auth=${redis-config.auth_string}
-redis-certificate=${base64encode(one(redis-config.server_ca_certs).cert)}
-%{ endif }
+redis-certificate=${base64encode(one(redis-config.server_ca_certs).cert)}%{ endif }
 dhcp-send-hostname=yes
 dhcp-send-client-id=yes
 dhcp-accept-server-hostname=yes

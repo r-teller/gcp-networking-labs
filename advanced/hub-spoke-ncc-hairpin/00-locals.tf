@@ -19,7 +19,8 @@ locals {
       prefix : "ha-mgmt",
       cloud_nat_all_subnets = true
       firewall_rules = {
-        allowed_ssh_sources = ["0.0.0.0/0"]
+        allowed_ssh_sources   = ["0.0.0.0/0"]
+        allowed_https_sources = ["0.0.0.0/0"]
       }
       private_service_ranges = [
         # {
