@@ -45,7 +45,7 @@ module "distro_lan-to-access_trusted_a-palo" {
   random_id  = random_id.id
   input = {
     name_prefix     = "testing"
-    machine_type    = "n2d-standard-8"
+    machine_type    = "n2d-standard-4"
     service_account = google_service_account.service_account.email
     regional_asn = {
       us-east4 : 4204100001,
@@ -83,15 +83,26 @@ module "distro_lan-to-access_trusted_a-palo" {
 
     interfaces = {
       0 = {
+        config_map_tag = "hub_shared_aa00"
+        subnetwork_tag = "network_appliance"
+        use_ncc_hub    = true
+
+      }      
+      1 = {
+        config_map_tag   = "mgmt"
+        subnetwork_tag   = "mgmt"
+        external_enabled = true
+      }
+      2 = {
         config_map_tag = "spoke_prod_aa00"
         subnetwork_tag = "network_appliance"
         use_ncc_hub    = true
 
       }
-      1 = {
-        config_map_tag   = "mgmt"
-        subnetwork_tag   = "mgmt"
-        external_enabled = true
+      3 = {
+        config_map_tag   = "spoke_nonprod_aa00"
+        subnetwork_tag   = "network_appliance"
+        use_ncc_hub    = true
       }
     }
   }

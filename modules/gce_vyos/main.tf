@@ -26,7 +26,7 @@ resource "google_compute_address" "internal_addresses" {
 }
 
 resource "google_compute_instance" "instances" {
-  for_each = local.map
+  for_each = { for k, v in local.map : k => v if var.create_vms }
 
   depends_on = [
     google_compute_address.internal_addresses
@@ -99,7 +99,7 @@ resource "google_compute_instance" "instances" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/network_connectivity_spoke
 resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
-  for_each = { for x in distinct(values(merge(values(local.map).*.subnetworks...))) : x.ncc_spoke => x if x.use_ncc_hub }
+  for_each = { for x in distinct(values(merge(values(local.map).*.subnetworks...))) : x.ncc_spoke => x if x.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 
@@ -129,7 +129,7 @@ resource "google_network_connectivity_spoke" "network_connectivity_spoke" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
 resource "google_compute_router_peer" "router_peer-nic0" {
-  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub }
+  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 
@@ -157,7 +157,7 @@ resource "google_compute_router_peer" "router_peer-nic0" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_peer
 resource "google_compute_router_peer" "router_peer-nic1" {
-  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub }
+  for_each = { for k, v in merge(values(local.map).*.subnetworks...) : k => v if v.use_ncc_hub && var.create_vms }
 
   project = var.project_id
 

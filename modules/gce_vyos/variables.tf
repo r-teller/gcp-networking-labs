@@ -11,6 +11,11 @@ variable "project_id" {
   type = string
 }
 
+variable "create_vms" {
+  type    = bool
+  default = true
+}
+
 variable "config_map" {
   description = "Map of network configurations"
 

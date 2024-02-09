@@ -17,7 +17,6 @@ variable "create_vms" {
   default = true
 }
 
-
 variable "config_map" {
   description = "Map of network configurations"
 

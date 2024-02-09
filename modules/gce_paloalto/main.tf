@@ -15,7 +15,7 @@ resource "tls_private_key" "default" {
 resource "local_file" "private_key" {
   count = var.input.ssh_keys == null ? 1 : 0
 
-  filename = "./local_config/test.key"
+  filename = format("./local_config/id_rsa_%s.key", local.random_id.hex)
   content  = tls_private_key.default[0].private_key_pem
 }
 

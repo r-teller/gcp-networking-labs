@@ -84,6 +84,7 @@ locals {
         europe-west3 : 4233000000,
       }
       cloud_nat_all_subnets = false
+      advertise_local_subnets = true
       subnetworks = [
         {
           region = "us-east4",
@@ -110,6 +111,7 @@ locals {
         europe-west3 : 4233000001,
       }
       cloud_nat_all_subnets = false
+      advertise_local_subnets = true
       subnetworks = [
         {
           region = "us-east4",
