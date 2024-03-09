@@ -45,7 +45,7 @@ locals {
       prefix = "hub-shared-aa00"
 
       cloud_nat_all_subnets   = false
-      advertise_local_subnets = true
+      advertise_local_subnets = false
       ## if regional ASN exists it will be preferred over the shared ASN
       shared_asn = 64516
       regional_asn = {
@@ -55,7 +55,18 @@ locals {
         europe-west3 : 4232000002,
       }
       firewall_rules = {
+        allow_iap = true
         # allowed_ssh_sources = ["1.1.1.1"]
+      }
+      summary_ip_ranges = {
+        # "us-east4" : [
+        #   "10.0.0.0/16",
+        #   "10.32.0.0/16",
+        # ],
+        # "us-west1" : [
+        #   "10.0.0.0/16",
+        #   "10.32.0.0/16",
+        # ],
       }
       subnetworks = [
         {
@@ -83,7 +94,7 @@ locals {
         asia-southeast1 : 4223000000,
         europe-west3 : 4233000000,
       }
-      cloud_nat_all_subnets = false
+      cloud_nat_all_subnets   = false
       advertise_local_subnets = true
       subnetworks = [
         {
@@ -110,7 +121,7 @@ locals {
         asia-southeast1 : 4223000001,
         europe-west3 : 4233000001,
       }
-      cloud_nat_all_subnets = false
+      cloud_nat_all_subnets   = false
       advertise_local_subnets = true
       subnetworks = [
         {
