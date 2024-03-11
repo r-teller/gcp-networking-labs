@@ -1,1 +1,1 @@
-secrets/*.pem
+secrets/client_*.pem

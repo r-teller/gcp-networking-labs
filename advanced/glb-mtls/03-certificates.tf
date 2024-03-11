@@ -94,7 +94,6 @@ resource "tls_locally_signed_cert" "client_cert" {
   ]
 }
 
-
 # Store the client certificate in a local file
 resource "local_file" "client_cert_file" {
   content  = tls_locally_signed_cert.client_cert.cert_pem
@@ -118,9 +117,12 @@ resource "google_certificate_manager_trust_config" "mtls_trust_config" {
     trust_anchors {
       pem_certificate = tls_self_signed_cert.root_ca_cert.cert_pem
     }
+    trust_anchors {
+      pem_certificate = file("${path.module}/secrets/authenticated_origin_pull_ca.pem")
+    }
   }
-
 }
+
 
 # https://registry.terraform.io/providers/hashicorp/google/5.19.0/docs/resources/network_security_server_tls_policy
 resource "google_network_security_server_tls_policy" "mtls_server_policy" {
@@ -135,6 +137,7 @@ resource "google_network_security_server_tls_policy" "mtls_server_policy" {
     client_validation_trust_config = google_certificate_manager_trust_config.mtls_trust_config.id
     client_validation_mode         = "ALLOW_INVALID_OR_MISSING_CLIENT_CERT"
   }
+
 
   lifecycle {
     ignore_changes = [

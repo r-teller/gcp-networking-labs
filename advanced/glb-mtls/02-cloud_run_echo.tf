@@ -76,9 +76,11 @@ resource "google_compute_backend_service" "gcr_echo_backend" {
   enable_cdn            = false
 
   custom_request_headers = [
-    "X-Client-Geo-Location: {client_region_subdivision}, {client_city}",
-    "X-Client-Certificate-Present: {client_cert_present}",
-    "X-Client-Certificate-Valid: {client_cert_chain_verified}",
+    "mtls-Client-Geo-Location: {client_region_subdivision}, {client_city}",
+    "mtls-Client-Certificate-Present: {client_cert_present}",
+    "mtls-Client-Certificate-Valid: {client_cert_chain_verified}",
+    "mtls-Client-Certificate-Issuer: {client_cert_issuer_dn}",
+    "mtls-Client-Certificate-Subject: {client_cert_subject_dn}",
   ]
 
 
