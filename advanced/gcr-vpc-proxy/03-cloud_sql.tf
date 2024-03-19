@@ -21,7 +21,13 @@ resource "google_sql_database_instance" "gsql_postgres" {
       )
       ssl_mode = "ALLOW_UNENCRYPTED_AND_ENCRYPTED"
     }
+    deletion_protection_enabled = false
+    database_flags {
+      name  = "cloudsql.iam_authentication"
+      value = "on"
+    }
 
     availability_type = "ZONAL"
   }
+  depends_on = [module.network-hub_shared_aa00]
 }

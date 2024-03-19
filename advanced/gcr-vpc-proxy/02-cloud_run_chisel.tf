@@ -20,10 +20,10 @@ resource "google_cloud_run_v2_service" "gcr_chisel" {
       }
       resources {
         limits = {
-          cpu    = "1"
-          memory = "128Mi"
+          cpu    = "1000m"
+          memory = "512Mi"
         }
-        cpu_idle = true
+        cpu_idle = false
       }
       args = [
         "server",
@@ -44,8 +44,9 @@ resource "google_cloud_run_v2_service" "gcr_chisel" {
 
     max_instance_request_concurrency = 10
   }
-}
 
+  depends_on = [module.network-hub_shared_aa00]
+}
 
 # ## https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_region_network_endpoint_group
 # resource "google_compute_region_network_endpoint_group" "gcr_echo_neg" {

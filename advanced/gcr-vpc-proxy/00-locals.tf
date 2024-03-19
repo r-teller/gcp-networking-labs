@@ -25,13 +25,21 @@ locals {
       private_service_ranges = [
         {
           suffix        = "usc1",
+          ip_cidr_range = "10.64.1.0/24",
+        },
+        {
+          suffix        = "usw1",
           ip_cidr_range = "10.64.2.0/24",
         },
       ]
       subnetworks = [
         {
           region        = "us-central1",
-          ip_cidr_range = "172.24.0.0/24",
+          ip_cidr_range = "172.24.1.0/24",
+        },
+        {
+          region        = "us-west1",
+          ip_cidr_range = "172.24.2.0/24",
         },
       ]
     }
