@@ -7,8 +7,6 @@ resource "null_resource" "vpc_peering-hub_spoke" {
 }
 
 module "vpc_peering-hub_spoke" {
-  count = 1
-
   source     = "../../modules/vpc_peering"
   config_map = local._networks
   project_id = var.project_id

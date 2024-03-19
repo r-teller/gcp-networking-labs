@@ -200,7 +200,6 @@ resource "google_compute_firewall" "firewall-allowed_ssh_sources" {
   }
 }
 
-
 resource "google_compute_firewall" "firewall-allowed_https_sources" {
   count   = length(local.config_map["firewall_rules"].allowed_https_sources) > 0 ? 1 : 0
   project = var.project_id
@@ -215,7 +214,6 @@ resource "google_compute_firewall" "firewall-allowed_https_sources" {
     ports    = [443]
   }
 }
-
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_route
 resource "google_compute_route" "route-iap" {
@@ -257,10 +255,11 @@ resource "google_compute_subnetwork" "subnetwork" {
   name    = format("%s-%s-%s", local.config_map["prefix"], replace(each.value.ip_cidr_range, "//|\\./", "-"), local.random_id.hex)
   network = google_compute_network.network.self_link
 
-  private_ip_google_access = true
+  private_ip_google_access = each.value.purpose == "PRIVATE" ? true : null
   ip_cidr_range            = each.value.ip_cidr_range
   region                   = each.value.region
-
+  purpose                  = each.value.purpose
+  role                     = each.value.purpose == "REGIONAL_MANAGED_PROXY" ? "ACTIVE" : null
   dynamic "secondary_ip_range" {
     for_each = try(toset(each.value.secondary_ip_ranges), [])
     content {
@@ -268,6 +267,57 @@ resource "google_compute_subnetwork" "subnetwork" {
       ip_cidr_range = secondary_ip_range.value
     }
   }
+}
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_global_address
+resource "google_compute_global_address" "global_address" {
+  for_each = { for x in local.config_map["private_service_ranges"] : x.ip_cidr_range => merge(x, {
+    // Splitting the IP CIDR range into base address and prefix length for better clarity
+    cidr_components = split("/", x.ip_cidr_range)
+  }) }
+
+  project = var.project_id
+  name = coalesce(
+    each.value.name,
+    format("%s-%s%s-%s",
+      local.config_map["prefix"],
+      replace(each.value.ip_cidr_range, "//|\\./", "-"),
+      (each.value.suffix != null ? format("-%s", each.value.suffix) : ""),
+      local.random_id.hex
+    )
+  )
+
+  purpose      = "VPC_PEERING"
+  address_type = "INTERNAL"
+
+  // Utilizing the first element as the base address of the CIDR range
+  address = each.value.cidr_components[0]
+  // Utilizing the second element as the prefix length of the CIDR range
+  prefix_length = each.value.cidr_components[1]
+
+  network = google_compute_network.network.id
+}
+
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_networking_connection
+resource "google_service_networking_connection" "networking_connection" {
+  # for_each = { for x in local.config_map["subnetworks"] : x.ip_cidr_range => x if(x.purpose == "PRIVATE") }
+  count = length(google_compute_global_address.global_address) > 0 ? 1 : 0
+
+  network                 = google_compute_network.network.self_link
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [for x in google_compute_global_address.global_address : x.name]
+}
+
+resource "google_compute_network_peering_routes_config" "peering_routes" {
+  count = length(google_compute_global_address.global_address) > 0 ? 1 : 0
+
+  project = var.project_id
+
+  network = google_compute_network.network.name
+  peering = google_service_networking_connection.networking_connection[0].peering
+
+  import_custom_routes = false
+  export_custom_routes = true
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router
@@ -347,7 +397,6 @@ resource "google_network_connectivity_hub" "connectivity_hub" {
     google_compute_network.network
   ]
 }
-
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
 resource "google_compute_router_interface" "router_interface-nic0" {

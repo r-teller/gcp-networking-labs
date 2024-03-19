@@ -31,13 +31,13 @@ locals {
       subnetworks : [
         {
           region : "us-east4",
-          ip_cidr_range : "192.168.255.0/27",
-          tags = ["mgmt"],
+          ip_cidr_range = "192.168.255.0/27",
+          tags          = ["mgmt"],
         },
         {
           region : "us-west1",
-          ip_cidr_range : "192.168.255.32/27",
-          tags = ["mgmt"],
+          ip_cidr_range = "192.168.255.32/27",
+          tags          = ["mgmt"],
         }
       ]
     }
@@ -71,15 +71,15 @@ locals {
       subnetworks = [
         {
 
-          region = "us-east4",
-          ip_cidr_range : "172.24.0.0/24",
-          tags = ["network_appliance"],
+          region        = "us-east4",
+          ip_cidr_range = "172.24.0.0/24",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
         },
         {
-          region = "us-west1",
-          ip_cidr_range : "172.24.1.0/24",
-          tags = ["network_appliance"],
+          region        = "us-west1",
+          ip_cidr_range = "172.24.1.0/24",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
         },
       ]
@@ -98,22 +98,22 @@ locals {
       advertise_local_subnets = true
       subnetworks = [
         {
-          region = "us-east4",
-          ip_cidr_range : "10.0.96.0/27",
-          tags = ["network_appliance"],
+          region        = "us-east4",
+          ip_cidr_range = "10.0.96.0/27",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
         },
         {
-          region = "us-west1",
-          ip_cidr_range : "10.32.96.0/27",
-          tags = ["network_appliance"],
+          region        = "us-west1",
+          ip_cidr_range = "10.32.96.0/27",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
         }
       ]
     }
 
     spoke_nonprod_aa00 = {
-      prefix = "spokae-nonprod-aa00"
+      prefix = "spoke-nonprod-aa00"
       ## if regional ASN exists it will be preferred over the shared ASN
       regional_asn = {
         us-east4 : 4203000001,
@@ -121,20 +121,37 @@ locals {
         asia-southeast1 : 4223000001,
         europe-west3 : 4233000001,
       }
+      private_service_ranges = [
+        {
+          suffix        = "usc1",
+          ip_cidr_range = "10.64.2.0/24",
+        },
+      ]
       cloud_nat_all_subnets   = false
       advertise_local_subnets = true
       subnetworks = [
         {
-          region = "us-east4",
-          ip_cidr_range : "10.0.0.0/27",
-          tags = ["network_appliance"],
+          region        = "us-east4",
+          ip_cidr_range = "10.0.0.0/27",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
         },
         {
-          region = "us-west1",
-          ip_cidr_range : "10.32.0.0/27",
-          tags = ["network_appliance"],
+          region        = "us-west1",
+          ip_cidr_range = "10.32.0.0/27",
+          tags          = ["network_appliance"],
           secondary_ip_ranges : [],
+        },
+        {
+          region        = "us-central1",
+          ip_cidr_range = "10.64.0.0/27",
+          tags          = ["network_appliance"],
+          secondary_ip_ranges : [],
+        },
+        {
+          region        = "us-central1",
+          ip_cidr_range = "10.64.1.0/26",
+          purpose       = "REGIONAL_MANAGED_PROXY",
         }
       ]
     }

@@ -18,10 +18,6 @@ variable "config_map" {
       tags                = optional(list(string))
       secondary_ip_ranges = optional(list(string))
     }))
-    private_service_ranges = optional(list(object({
-      region        = string
-      ip_cidr_range = string
-    })))
   }))
 }
 
