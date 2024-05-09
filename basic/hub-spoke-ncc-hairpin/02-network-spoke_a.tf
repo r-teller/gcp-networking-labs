@@ -34,28 +34,28 @@ resource "google_compute_router" "spoke_a_us_west1_router" {
   }
 }
 
-# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
-resource "google_compute_router_interface" "router_interface-nic0-us-west1" {
-  project = var.project_id
+# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
+# resource "google_compute_router_interface" "router_interface-nic0-us-west1" {
+#   project = var.project_id
 
-  name               = "spoke-a-us-west1-router-nic0-${random_id.id.hex}"
-  router             = google_compute_router.spoke_a_us_west1_router.name
-  region             = google_compute_router.spoke_a_us_west1_router.region
-  private_ip_address = cidrhost(google_compute_subnetwork.spoke_a_us_west1_subnet.ip_cidr_range, -3)
-  subnetwork         = google_compute_subnetwork.spoke_a_us_west1_subnet.self_link
-}
+#   name               = "spoke-a-us-west1-router-nic0-${random_id.id.hex}"
+#   router             = google_compute_router.spoke_a_us_west1_router.name
+#   region             = google_compute_router.spoke_a_us_west1_router.region
+#   private_ip_address = cidrhost(google_compute_subnetwork.spoke_a_us_west1_subnet.ip_cidr_range, -3)
+#   subnetwork         = google_compute_subnetwork.spoke_a_us_west1_subnet.self_link
+# }
 
-# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
-resource "google_compute_router_interface" "router_interface-nic1-us-west1" {
-  project = var.project_id
+# # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_router_interface
+# resource "google_compute_router_interface" "router_interface-nic1-us-west1" {
+#   project = var.project_id
 
-  name               = "spoke-a-us-west1-router-nic1-${random_id.id.hex}"
-  router             = google_compute_router.spoke_a_us_west1_router.name
-  region             = google_compute_router.spoke_a_us_west1_router.region
-  redundant_interface = google_compute_router_interface.router_interface-nic0-us-west1.name
-  private_ip_address = cidrhost(google_compute_subnetwork.spoke_a_us_west1_subnet.ip_cidr_range, -4)
-  subnetwork         = google_compute_subnetwork.spoke_a_us_west1_subnet.self_link
-}
+#   name               = "spoke-a-us-west1-router-nic1-${random_id.id.hex}"
+#   router             = google_compute_router.spoke_a_us_west1_router.name
+#   region             = google_compute_router.spoke_a_us_west1_router.region
+#   redundant_interface = google_compute_router_interface.router_interface-nic0-us-west1.name
+#   private_ip_address = cidrhost(google_compute_subnetwork.spoke_a_us_west1_subnet.ip_cidr_range, -4)
+#   subnetwork         = google_compute_subnetwork.spoke_a_us_west1_subnet.self_link
+# }
 
 # Google Compute Subnetwork - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork
 resource "google_compute_subnetwork" "spoke_a_us_east4_subnet" {
