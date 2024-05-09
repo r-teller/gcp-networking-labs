@@ -1,0 +1,37 @@
+${
+    format(
+        "42%02d%s%s%04d",
+        # Expanded Region logic: Mapping all 40 GCP regions to indices, defaulting to 99 for unknown values
+        coalesce(one([
+            for k, v in {
+                "northamerica-northeast1"=1, "northamerica-northeast2"=2,
+                "us-central1"=3, "us-east1"=4, "us-east4"=5,
+                "us-west1"=6, "us-west2"=7, "us-west3"=8, "us-west4"=9,
+                "southamerica-east1"=10, "southamerica-west1"=11,
+                "europe-central2"=12, "europe-north1"=13, "europe-west1"=14,
+                "europe-west2"=15, "europe-west3"=16, "europe-west4"=17, "europe-west6"=18,
+                "asia-east1"=19, "asia-east2"=20, "asia-northeast1"=21,
+                "asia-northeast2"=22, "asia-northeast3"=23, "asia-south1"=24,
+                "asia-south2"=25, "asia-southeast1"=26, "asia-southeast2"=27,
+                "australia-southeast1"=28, "australia-southeast2"=29,
+                "middleeast-north1"=30, "middleeast-north2"=31,
+                "africa-south1"=32, "africa-west1"=33,
+                "europe-west9"=34, "europe-central2"=35,
+                "asia-southeast3"=36, "asia-southeast4"=37,
+                "asia-southeast5"=38, "asia-southeast6"=39,
+                "asia-southeast7"=40
+                # Ensure this list is updated as GCP adds new regions
+            }: v if k == attributes["region"]
+        ]), 99),
+        # Tier logic: Mapping tier names to numbers, defaulting to 9 for unknown values
+        coalesce(one([
+            for k, v in {"core_wan"=1, "aggregation_lan"=2, "trusted_access"=3, "application_access"=4}: v if k == attributes["tier"]
+        ]), 9),
+        # Layer logic: Mapping layer names to numbers, defaulting to 6 for unknown values
+        coalesce(one([
+            for k, v in {"core_wan-to-aggregation_lan"=1, "aggregation_lan-to-trusted_access"=2, "application_access-hairpin"=3}: v if k == attributes["layer"]
+        ]), 6),
+        # Index number: Directly using attributes["index_number"], assuming it's properly set
+        attributes["index_number"]
+    )
+}
